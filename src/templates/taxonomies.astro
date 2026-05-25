@@ -4,7 +4,6 @@
  * Duas colunas: esquerda (5/12) formulário Nome/Slug/Descrição + Salvar; direita (6/12) datalist name, slug, type.
  * type e parent_id vêm da URL e do registro pai do type.
  */
-import AdminLayout from "../layouts/AdminLayout.astro";
 import AdminTwoColumns from "../components/admin/AdminTwoColumns.astro";
 import DataListPanel from "../components/DataListPanel.astro";
 import LanguageDropdown from "../components/LanguageDropdown.astro";
@@ -44,7 +43,6 @@ const {
   user,
 } = Astro.props;
 const currentLocale = locale as Locale;
-const title = t(currentLocale, "taxonomy.type." + type);
 const action = params["action"] ?? "";
 const idParam = params["id"] ?? "";
 const isEdit = action === "edit" && idParam && /^\d+$/.test(idParam);
@@ -157,13 +155,7 @@ const filterClearHref = buildUrlWithParams(
 );
 ---
 
-<AdminLayout
-  title={title}
-  locale={locale}
-  menuItems={menuItems}
-  user={user !== undefined ? user : null}
->
-  <script define:vars={{ initialName, initialSlug, initialDescription }}>
+<script define:vars={{ initialName, initialSlug, initialDescription }}>
     window.slugify = function (text) {
       if (typeof text !== "string" || !text.trim()) return "";
       return text
@@ -367,7 +359,6 @@ const filterClearHref = buildUrlWithParams(
       />
     </div>
   </AdminTwoColumns>
-</AdminLayout>
 
 <script is:inline>
   (function () {

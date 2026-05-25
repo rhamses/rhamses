@@ -225,7 +225,7 @@ const showAlternateTemplate =
     import "../../../scripts/content-form-init.ts";
   </script>
 
-  <div class="h-full flex flex-col min-h-0 py-6 pl-6 pr-0">
+  <div class="flex-1 flex flex-col min-h-0 py-6 pl-6 pr-0">
     <form
       method="post"
       action="/api/posts"
@@ -267,8 +267,11 @@ const showAlternateTemplate =
           />
         </div>
 
-        <div class="form-control flex-1 min-h-0 flex flex-col shrink-0">
-          <div class="flex-1 min-h-0 content-editor-fullheight">
+        <div class="form-control flex-1 flex flex-col min-h-[480px]">
+          <label for="body" class="label shrink-0">
+            <span class="label-text">{t(locale, "admin.content.body")}</span>
+          </label>
+          <div class="flex-1 content-editor-fullheight">
             <ContentEditor
               initialBody={post?.body ?? ""}
               name="body"

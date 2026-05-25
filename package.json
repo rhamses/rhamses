@@ -20,6 +20,10 @@
   "license": "ISC",
   "author": "Amb1.io",
   "type": "module",
+  "overrides": {
+    "react": "$react",
+    "react-dom": "$react-dom"
+  },
   "main": "index.ts",
   "scripts": {
     "predev": "node scripts/sync-theme-public.mjs",
