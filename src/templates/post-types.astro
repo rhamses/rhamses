@@ -6,10 +6,16 @@
 import AdminLayout from "../layouts/AdminLayout.astro";
 import AdminFormContainer from "../components/admin/AdminFormContainer.astro";
 import AdminFormActions from "../components/admin/AdminFormActions.astro";
+import DataListPanel from "../components/DataListPanel.astro";
 import { t, type Locale } from "../i18n/index.ts";
 import type { MenuItem } from "../lib/menu.ts";
 import type { MetaSchemaItem } from "../db/schema/meta_schema.ts";
 import { LINE_MD_ICONS, DEFAULT_ICON, isValidLineMdIcon } from "../lib/line-md-icons.ts";
+import {
+  buildUrlWithParams,
+  filterItemsClientSide,
+  parseFilterParams,
+} from "../lib/list-utils.ts";
 
 export interface PostTypeRow {
   id: number;
@@ -117,6 +123,24 @@ const META_TYPES = ["string", "number", "boolean", "array"];
 
 const formAction = isEdit ? `/api/post-types/${editRecord!.id}` : "/api/post-types";
 const listUrl = `/admin/${locale}/settings?page=post_types`;
+
+const listColumns = [
+  { key: "name", label: t(currentLocale, "admin.settings.name") },
+  { key: "slug", label: t(currentLocale, "admin.taxonomy.formSlug") },
+];
+const filter = parseFilterParams(Astro.url.searchParams);
+const listItems = filterItemsClientSide(
+  items.map((row) => ({ id: row.id, name: row.name, slug: row.slug })),
+  filter,
+  listColumns.map((col) => col.key),
+);
+const filterClearHref = buildUrlWithParams(listUrl, Astro.url.searchParams, {
+  filter_name: null,
+  filter_slug: null,
+});
+const deleteConfirmMessage =
+  t(currentLocale, "admin.postTypes.deleteConfirm") ||
+  "Se apagar o post type todos os posts associados serão deletados.";
 ---
 
 <AdminLayout
@@ -362,58 +386,30 @@ const listUrl = `/admin/${locale}/settings?page=post_types`;
 
       <div>
         <h3 class="font-medium mb-3">{t(currentLocale, "admin.list.title")}</h3>
-        {items.length === 0 ? (
-          <p class="text-base-content/70">{t(currentLocale, "admin.list.noItems")}</p>
-        ) : (
-          <ul class="space-y-2">
-            {items.map((row) => (
-              <li
-                class="flex items-center justify-between gap-2 p-3 bg-base-100 border border-base-300 rounded-lg"
-              >
-                <div>
-                  <span class="font-medium">{row.name}</span>
-                  <span class="text-base-content/60 text-sm ml-2">{row.slug}</span>
-                </div>
-                <div class="flex gap-1">
-                  <a
-                    href={`/admin/${locale}/settings?page=post_types&edit=${row.id}`}
-                    class="btn btn-ghost btn-sm"
-                  >
-                    {t(currentLocale, "admin.list.edit")}
-                  </a>
-                  <button
-                    type="button"
-                    class="btn btn-ghost btn-sm text-error post-type-delete-btn"
-                    data-delete-url={`/api/post-types/${row.id}`}
-                    data-row-id={row.id}
-                  >
-                    {t(currentLocale, "admin.list.delete")}
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <DataListPanel
+          columns={listColumns}
+          items={listItems}
+          action={listUrl}
+          hiddenFields={{ page: "post_types" }}
+          filterValues={filter}
+          filterPlaceholder={t(currentLocale, "admin.list.filter")}
+          filterSubmitLabel={t(currentLocale, "admin.list.filterSubmit")}
+          filterClearLabel={t(currentLocale, "admin.list.filterClear")}
+          filterClearHref={filterClearHref}
+          emptyMessage={t(currentLocale, "admin.list.noItems")}
+          emptyColspan={3}
+          editLabel={t(currentLocale, "admin.list.edit")}
+          deleteLabel={t(currentLocale, "admin.list.delete")}
+          actionsColumnLabel={t(currentLocale, "admin.list.actions")}
+          actionConfig={{
+            editLinkTemplate: `/admin/${locale}/settings?page=post_types&edit={id}`,
+            deletePathTemplate: `/api/post-types/{id}`,
+            deleteConfirm: deleteConfirmMessage,
+          }}
+        />
       </div>
     </div>
   </div>
-
-  <dialog id="delete-post-type-modal" class="modal">
-    <div class="modal-box">
-      <p id="delete-post-type-modal-message" class="py-2">
-        {t(currentLocale, "admin.postTypes.deleteConfirm") || "Se apagar o post type todos os posts associados serão deletados."}
-      </p>
-      <div class="modal-action">
-        <form method="dialog">
-          <button type="button" class="btn btn-ghost btn-sm cancel-delete-post-type">{t(currentLocale, "admin.content.cancel") || "Cancelar"}</button>
-          <button type="button" class="btn btn-error btn-sm confirm-delete-post-type">{t(currentLocale, "admin.postTypes.confirmYes") || "Sim"}</button>
-        </form>
-      </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-      <button type="submit">fechar</button>
-    </form>
-  </dialog>
 </AdminLayout>
 
 <style>
@@ -580,45 +576,6 @@ const listUrl = `/admin/${locale}/settings?page=post_types`;
 
     document.querySelectorAll(".ms-remove-row").forEach((btn) => {
       btn.addEventListener("click", () => btn.closest(".meta-schema-row")?.remove());
-    });
-
-    const deleteModal = document.getElementById("delete-post-type-modal") as HTMLDialogElement | null;
-    const confirmDeleteBtn = document.querySelector(".confirm-delete-post-type");
-    const cancelDeleteBtn = document.querySelector(".cancel-delete-post-type");
-    let pendingDeleteUrl: string | null = null;
-
-    document.querySelectorAll(".post-type-delete-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        pendingDeleteUrl = (btn as HTMLElement).dataset["deleteUrl"] ?? null;
-        if (deleteModal && pendingDeleteUrl) {
-          deleteModal.showModal();
-        }
-      });
-    });
-
-    confirmDeleteBtn?.addEventListener("click", async () => {
-      if (!pendingDeleteUrl || !deleteModal) return;
-      try {
-        const res = await fetch(pendingDeleteUrl, {
-          method: "DELETE",
-          headers: { "HX-Request": "true" },
-        });
-        if (res.ok) {
-          deleteModal.close();
-          pendingDeleteUrl = null;
-          window.location.reload();
-        } else {
-          const data = await res.json().catch(() => ({})) as { error?: string };
-          alert(typeof data?.error === "string" ? data.error : "Erro ao excluir.");
-        }
-      } catch (e) {
-        alert("Erro ao excluir.");
-      }
-    });
-
-    cancelDeleteBtn?.addEventListener("click", () => {
-      deleteModal?.close();
-      pendingDeleteUrl = null;
     });
 
     document.body.addEventListener("htmx:afterRequest", (ev: Event) => {

@@ -12,6 +12,7 @@
   "admin.list.title": "Lista",
   "admin.list.filter": "Filtrar",
   "admin.list.filterSubmit": "Filtrar",
+  "admin.list.filterClear": "Limpiar",
   "admin.list.selectAll": "Seleccionar todos",
   "admin.list.selectItem": "Seleccionar elemento {id}",
   "admin.list.id": "ID",

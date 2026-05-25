@@ -6,13 +6,18 @@
  */
 import AdminLayout from "../layouts/AdminLayout.astro";
 import AdminTwoColumns from "../components/admin/AdminTwoColumns.astro";
-import DataList from "../components/DataList.astro";
+import DataListPanel from "../components/DataListPanel.astro";
 import LanguageDropdown from "../components/LanguageDropdown.astro";
 import { db } from "../db/index.ts";
 import { taxonomies, locales as localesTable } from "../db/schema.ts";
 import { and, eq, or, isNull } from "drizzle-orm";
 import { t, type Locale } from "../i18n/index.ts";
 import type { MenuItem } from "../lib/menu.ts";
+import {
+  buildUrlWithParams,
+  filterFromParams,
+  filterItemsClientSide,
+} from "../lib/list-utils.ts";
 
 export interface Props {
   locale: string;
@@ -112,13 +117,12 @@ const taxonomyRows =
         )
         .orderBy(taxonomies.name)
     : [];
-const taxonomyItems = taxonomyRows.map((r) => ({
-  id: r.id,
-  name: r.name,
-  slug: r.slug,
-  type: r.type,
-  language: r.language ?? "—",
-}));
+const columns = [
+  { key: "name", label: t(currentLocale, "admin.taxonomy.formName") },
+  { key: "slug", label: t(currentLocale, "admin.taxonomy.formSlug") },
+  { key: "type", label: t(currentLocale, "admin.taxonomy.typeColumn") },
+  { key: "language", label: t(currentLocale, "admin.content.language") },
+];
 
 const baseUrl = `/admin/${locale}/${slug}?domain=${domain}&type=${encodeURIComponent(type)}`;
 
@@ -127,13 +131,30 @@ const initialSlug = editTaxonomy?.slug ?? "";
 const initialDescription = editTaxonomy?.description ?? "";
 const initialLocaleId = editTaxonomy?.id_locale_code ?? null;
 
-const columns = [
-  { key: "name", label: t(currentLocale, "admin.taxonomy.formName") },
-  { key: "slug", label: t(currentLocale, "admin.taxonomy.formSlug") },
-  { key: "type", label: t(currentLocale, "admin.taxonomy.typeColumn") },
-  { key: "language", label: t(currentLocale, "admin.content.language") },
-];
+const filter = filterFromParams(params);
+const taxonomyItems = filterItemsClientSide(
+  taxonomyRows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    slug: r.slug,
+    type: r.type,
+    language: r.language ?? "—",
+  })),
+  filter,
+  columns.map((col) => col.key),
+);
+
 const emptyColspan = columns.length;
+const filterClearHref = buildUrlWithParams(
+  baseUrl,
+  new URLSearchParams(Object.entries(params)),
+  {
+  filter_name: null,
+  filter_slug: null,
+  filter_type: null,
+  filter_language: null,
+  },
+);
 ---
 
 <AdminLayout
@@ -321,9 +342,15 @@ const emptyColspan = columns.length;
       data-delete-label={t(locale, "admin.list.delete")}
       data-delete-confirm={t(locale, "admin.list.deleteConfirm")}
     >
-      <DataList
+      <DataListPanel
         columns={columns}
         items={taxonomyItems}
+        action={baseUrl}
+        filterValues={filter}
+        filterPlaceholder={t(locale, "admin.list.filter")}
+        filterSubmitLabel={t(locale, "admin.list.filterSubmit")}
+        filterClearLabel={t(locale, "admin.list.filterClear")}
+        filterClearHref={filterClearHref}
         emptyMessage={t(currentLocale, "admin.list.noItems")}
         emptyColspan={emptyColspan}
         selectable
