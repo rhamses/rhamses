@@ -61,7 +61,7 @@ describe("db-utils", () => {
 
   describe("getContentApiRuntime", () => {
     it("retorna isAuthenticated true e kv null quando user presente", () => {
-      env.edgepress_cache = {};
+      env.CACHE = {};
       const locals = {
         user: { id: "1", email: "a@b.com" },
       } as App.Locals;
@@ -72,7 +72,7 @@ describe("db-utils", () => {
 
     it("retorna isAuthenticated false e kv quando user ausente e KV presente", () => {
       const mockKv = { get: async () => null, put: async () => {} };
-      env.edgepress_cache = mockKv;
+      env.CACHE = mockKv;
       const locals = {
         user: null,
         session: null,

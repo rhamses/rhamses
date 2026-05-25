@@ -26,7 +26,7 @@ preview_database_id = "fbe4ede5-a168-4a33-8570-4c62be8b1c94"
 migrations_dir = "./drizzle"
 
 [[kv_namespaces]]
-binding = "edgepress_cache"
+binding = "CACHE"
 id = "00ca0b8ef45143f6aede0d5dd2d32e65"
 
 [[r2_buckets]]
@@ -53,7 +53,7 @@ preview_database_id = "fbe4ede5-a168-4a33-8570-4c62be8b1c94"
 migrations_dir = "./drizzle"
 
 [[env.preview.kv_namespaces]]
-binding = "edgepress_cache"
+binding = "CACHE"
 id = "00ca0b8ef45143f6aede0d5dd2d32e65"
 
 [[env.preview.r2_buckets]]

@@ -54,7 +54,7 @@ function shouldIncludeInSitemap(page) {
 export default defineConfig({
   site: siteOrigin,
   adapter: cloudflare({
-    sessionKVBindingName: "edgepress_cache",
+    sessionKVBindingName: "CACHE",
     platformProxy: {
       enabled: true,
       configPath: "wrangler.toml",
