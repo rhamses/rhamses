@@ -33,6 +33,7 @@ function prefixSql(content) {
     const prefixed = PREFIX + table;
 
     result = result.replaceAll(`\`${table}\``, `\`${prefixed}\``);
+    result = result.replaceAll(`"${table}"`, `"${prefixed}"`);
 
     const keywords = ["INTO", "FROM", "JOIN", "UPDATE", "TABLE", "REFERENCES", "EXISTS"];
     for (const kw of keywords) {
@@ -43,7 +44,10 @@ function prefixSql(content) {
     // Índices: posts_slug_unique → edp_posts_slug_unique (sem afetar colunas user_id, etc.)
     result = result.replaceAll(`INDEX \`${table}_`, `INDEX \`${prefixed}_`);
     result = result.replaceAll(`UNIQUE INDEX \`${table}_`, `UNIQUE INDEX \`${prefixed}_`);
+    result = result.replaceAll(`INDEX "${table}_`, `INDEX "${prefixed}_`);
+    result = result.replaceAll(`UNIQUE INDEX "${table}_`, `UNIQUE INDEX "${prefixed}_`);
     result = result.replaceAll(`ON \`${table}\` `, `ON \`${prefixed}\` `);
+    result = result.replaceAll(`ON "${table}"`, `ON "${prefixed}"`);
   }
 
   return result;
