@@ -181,7 +181,7 @@ async function enrichEquipeRecord(record: LegacyPostRecord): Promise<LegacyPostR
   };
 }
 
-async function enrichPageRecord(record: LegacyPostRecord): Promise<LegacyPostRecord> {
+async function enrichThumbnailRecord(record: LegacyPostRecord): Promise<LegacyPostRecord> {
   const thumbId = record.post_thumbnail_id;
   const thumbPath = record.post_thumbnail_path ?? record.image;
   let thumbnail_url = "";
@@ -192,15 +192,23 @@ async function enrichPageRecord(record: LegacyPostRecord): Promise<LegacyPostRec
     thumbnail_url = resolveMediaPath(thumbPath);
   }
 
+  return {
+    ...record,
+    thumbnail_url,
+    thumbnail: thumbnail_url,
+  };
+}
+
+async function enrichPageRecord(record: LegacyPostRecord): Promise<LegacyPostRecord> {
+  const withThumbnail = await enrichThumbnailRecord(record);
+
   const customFields = await getPostCustomFields(db as never, record.id);
   const bgRaw =
     pickCustomFieldValue(customFields, "bg_image") ||
     (typeof record.bg_image === "string" ? record.bg_image : "");
 
   return {
-    ...record,
-    thumbnail_url,
-    thumbnail: thumbnail_url,
+    ...withThumbnail,
     bg_image: resolveMediaPath(bgRaw),
   };
 }
@@ -402,6 +410,10 @@ export class ThemeContentGateway {
 
     if (safeCategory === "equipe") {
       return Promise.all(records.map((record) => enrichEquipeRecord(record)));
+    }
+
+    if (safeCategory === "diretores") {
+      return Promise.all(records.map((record) => enrichThumbnailRecord(record)));
     }
 
     return records;

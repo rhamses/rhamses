@@ -323,7 +323,28 @@ function resolveCsvDir(): string {
   if (dirArgIndex !== -1 && process.argv[dirArgIndex + 1]) {
     return resolve(process.argv[dirArgIndex + 1]!);
   }
-  return resolve(process.cwd(), "..", "farramedia-edgepresss");
+
+  const candidates = [
+    resolve(process.cwd(), "farramedia-edgepresss"),
+    resolve(process.cwd(), "..", "farramedia-edgepresss"),
+    resolve(process.cwd(), "..", "farramedia-edgepress"),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      if (readdirSync(candidate).some((name) => name.endsWith(".csv"))) {
+        return candidate;
+      }
+    } catch {
+      // try next candidate
+    }
+  }
+
+  throw new Error(
+    `Pasta de CSVs não encontrada. Exporte os CSVs do D1 e passe o caminho:\n` +
+      `  tsx scripts/generate-csv-import-sql.ts --dir /caminho/para/csvs\n` +
+      `Tentado: ${candidates.join(", ")}`,
+  );
 }
 
 function main(): void {
