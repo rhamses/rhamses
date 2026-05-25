@@ -1,0 +1,38 @@
+---
+import Page from "../../../partials/portfolio-inner.astro";
+import {
+  GetCategoriesPost,
+  GetCategories,
+  GetPosts,
+  TagsFormat,
+  matchesLanguageForPost,
+} from "../../../helpers/helpers";
+import { themeRouteParam, themeRedirect } from "../../../helpers/route";
+import { getLanguageFromUrl } from "../../../i18n/utils";
+
+const slug = themeRouteParam(Astro, "slug");
+const page = "trabalhos";
+const lang = getLanguageFromUrl(Astro.url);
+
+if (!slug) {
+  return themeRedirect("/en/jobs");
+}
+
+let posts = await GetPosts({ "filters[slug][$eq]": slug });
+posts = posts.filter((p: any) => matchesLanguageForPost(p, lang));
+let post = posts[0];
+if (post) {
+  post = TagsFormat(post);
+  const postCategories = await GetCategoriesPost({
+    "filters[postId][$eq]": post.id,
+  });
+  const categories = await Promise.all(
+    postCategories.map(async (cat: any) => await GetCategories(cat.categoryId)),
+  );
+  post.categories = categories;
+} else {
+  return themeRedirect("/en/jobs");
+}
+---
+
+<Page page={page} post={post} />
