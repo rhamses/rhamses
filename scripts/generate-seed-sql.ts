@@ -14,6 +14,7 @@ import {
   MENU_CONFIG,
   META_ONLY_POST_TYPE_SLUGS,
   TAXONOMY_SEED_ROWS,
+  DEFAULT_SETTINGS_ROWS,
 } from "../src/db/seed-data.ts";
 import { EDP_TABLES } from "../src/db/table-prefix.ts";
 // JSON imports (chaves de tradução)
@@ -145,6 +146,13 @@ const lines: string[] = [
   ...ROLE_CAPABILITY_ROWS.map(
     (r, i) =>
       `  (${r.roleId}, '${escapeSql(r.capability)}')${i < ROLE_CAPABILITY_ROWS.length - 1 ? "," : ";"}`
+  ),
+  "",
+  "-- Settings iniciais (setup_done=N até concluir /setup)",
+  "INSERT OR IGNORE INTO settings (name, value, autoload) VALUES",
+  ...DEFAULT_SETTINGS_ROWS.map(
+    (row, i) =>
+      `  ('${escapeSql(row.name)}', '${escapeSql(row.value)}', ${row.autoload ? 1 : 0})${i < DEFAULT_SETTINGS_ROWS.length - 1 ? "," : ";"}`
   ),
   "",
 ];

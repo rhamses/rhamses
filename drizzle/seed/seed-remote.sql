@@ -119,6 +119,15 @@ INSERT OR IGNORE INTO edp_role_capability (role_id, capability) VALUES
   (2, 'menu.full'),
   (3, 'admin.dashboard');
 
+-- Settings iniciais (setup_done=N até concluir /setup)
+INSERT OR IGNORE INTO settings (name, value, autoload) VALUES
+  ('site_name', 'demo site', 1),
+  ('site_description', 'demo_description', 1),
+  ('setup_done', 'N', 1),
+  ('default_posttype', 'post', 1),
+  ('default_taxonomies', 'category,tag', 1),
+  ('active_theme', '2026', 1);
+
 -- Traduções (chaves dos arquivos en.json, es.json, pt_br.json)
 INSERT INTO edp_translations (namespace, key, created_at, updated_at) SELECT 'admin.menu', 'dashboard', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_translations WHERE namespace='admin.menu' AND key='dashboard');
 INSERT INTO edp_translations (namespace, key, created_at, updated_at) SELECT 'admin.menu', 'posts', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_translations WHERE namespace='admin.menu' AND key='posts');
