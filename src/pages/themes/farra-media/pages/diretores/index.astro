@@ -2,7 +2,7 @@
 import Layout from "../../layouts/default.astro";
 import WorkItem from "../../components/workitem.astro";
 import { getLanguageFromUrl, useTranslations } from "../../i18n/utils";
-import { GetDiretores, directorSlug } from "../../helpers/helpers";
+import { GetDiretores, directorSlug, postThumbnailUrl } from "../../helpers/helpers";
 
 const lang = getLanguageFromUrl(Astro.url);
 const t = useTranslations(lang);
@@ -35,7 +35,7 @@ if (!page) {
         <WorkItem
           label={posts.title}
           url={`${lang != "br" ? `/${lang}` : ""}/${t("pageDiretor")}/${directorSlug(posts)}`}
-          imagepr={posts.image}
+          imagepr={postThumbnailUrl(posts)}
         />
       ))
     }

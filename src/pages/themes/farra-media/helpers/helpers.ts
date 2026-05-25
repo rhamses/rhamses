@@ -218,6 +218,20 @@ export const directorSlug = (post: { slug?: unknown; legacy_id?: unknown }): str
   return raw.replace(/-(pt-br|en-us)$/i, "") || raw;
 };
 
+/** Thumbnail do post (admin) com fallback para meta `image` legado. */
+export function postThumbnailUrl(post: {
+  thumbnail?: unknown;
+  thumbnail_url?: unknown;
+  image?: unknown;
+}): string {
+  for (const candidate of [post.thumbnail, post.thumbnail_url, post.image]) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+  return "";
+}
+
 /** Conteúdo inline seguro para dentro de `<p class="edgtf-team-position">`. */
 export function toTeamPositionHtml(value: unknown): string {
   const text = value == null ? "" : String(value).trim();
