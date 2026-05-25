@@ -38,7 +38,7 @@ declare module "dropzone/dist/dropzone.css" {
 
 declare global {
   namespace App {
-    /** Interface mínima do KV (edgepress_cache) para tipagem em Locals. */
+    /** Interface mínima do KV (binding CACHE) para tipagem em Locals. */
     interface KVLike {
       get(key: string, type?: "text" | "json"): Promise<unknown>;
       put(key: string, value: string): Promise<void>;

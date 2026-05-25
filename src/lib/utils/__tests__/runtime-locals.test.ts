@@ -26,13 +26,13 @@ describe("runtime-locals", () => {
   });
 
   describe("getKvFromLocals", () => {
-    it("retorna null quando edgepress_cache não está no env", () => {
+    it("retorna null quando CACHE não está no env", () => {
       expect(getKvFromLocals({} as App.Locals)).toBeNull();
       expect(getKvFromLocals({ user: null, session: null } as App.Locals)).toBeNull();
     });
 
-    it("retorna KV quando edgepress_cache está no env do Worker", () => {
-      env.edgepress_cache = mockKv;
+    it("retorna KV quando CACHE está no env do Worker", () => {
+      env.CACHE = mockKv;
       expect(getKvFromLocals({} as App.Locals)).toBe(mockKv);
     });
   });
@@ -52,7 +52,7 @@ describe("runtime-locals", () => {
 
   describe("getCacheKvFromLocals", () => {
     it("retorna null quando autenticado (bypass de cache)", () => {
-      env.edgepress_cache = mockKv;
+      env.CACHE = mockKv;
       const locals = {
         user: { id: "1", email: "a@b.com" },
       } as App.Locals;
@@ -60,7 +60,7 @@ describe("runtime-locals", () => {
     });
 
     it("retorna KV quando não autenticado e KV disponível", () => {
-      env.edgepress_cache = mockKv;
+      env.CACHE = mockKv;
       const locals = {
         user: null,
         session: null,

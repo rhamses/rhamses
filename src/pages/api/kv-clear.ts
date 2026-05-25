@@ -1,6 +1,6 @@
 /**
  * DELETE /api/kv-clear
- * Remove todas as chaves do KV (edgepress_cache). Útil para testar a API sem cache.
+ * Remove todas as chaves do KV (CACHE). Útil para testar a API sem cache.
  * Requer autenticação de administrador.
  */
 import type { APIRoute } from "astro";
@@ -20,7 +20,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return new Response(
       JSON.stringify({
         ok: false,
-        message: "KV (edgepress_cache) not configured",
+        message: "KV (CACHE) not configured",
       }),
       { status: 503, headers: { "Content-Type": "application/json" } },
     );

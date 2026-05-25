@@ -1,6 +1,6 @@
 /**
  * GET /api/kv-list
- * Lista todas as chaves do KV (edgepress_cache) com prévia do valor.
+ * Lista todas as chaves do KV (CACHE) com prévia do valor.
  * Requer autenticação de administrador.
  */
 import type { APIRoute } from "astro";
@@ -22,7 +22,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return new Response(
       JSON.stringify({
         ok: false,
-        message: "KV (edgepress_cache) not configured",
+        message: "KV (CACHE) not configured",
       }),
       { status: 503, headers: { "Content-Type": "application/json" } },
     );
