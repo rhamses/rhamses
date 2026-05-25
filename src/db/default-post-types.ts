@@ -20,6 +20,7 @@ const postMetaSchema = buildMetaSchema([
 
 const pageMetaSchema = buildMetaSchema([
   { key: "post_thumbnail", type: "boolean", default: true },
+  { key: "post_types", type: "array", default: ["custom_fields"] },
 ]);
 
 const attachmentMetaSchema = buildMetaSchema([
@@ -46,12 +47,12 @@ const themesMetaSchema = buildMetaSchema([
 export const DEFAULT_POST_TYPES: DefaultPostTypeRow[] = [
   { slug: "post", name: "Post", meta_schema: postMetaSchema },
   { slug: "page", name: "Página", meta_schema: pageMetaSchema },
-  { slug: "dashboard", name: "Dashboard", meta_schema: buildMetaSchema([]) },
+  { slug: "attachment", name: "Mídia", meta_schema: attachmentMetaSchema },
+  { slug: "themes", name: "Temas", meta_schema: themesMetaSchema },
+  { slug: "user", name: "Usuário", meta_schema: buildMetaSchema([]) },
+  { slug: "translations_languages", name: "Tradução", meta_schema: translationsMetaSchema },
   { slug: "settings", name: "Configurações", meta_schema: buildMetaSchema([]) },
-  { slug: "user", name: "User", meta_schema: buildMetaSchema([]) },
-  { slug: "attachment", name: "Attachment", meta_schema: attachmentMetaSchema },
-  { slug: "translations_languages", name: "Translations Languages", meta_schema: translationsMetaSchema },
-  { slug: "themes", name: "Themes", meta_schema: themesMetaSchema },
+  { slug: "dashboard", name: "Dashboard", meta_schema: buildMetaSchema([]) },
   { slug: "custom_fields", name: "Custom Fields", meta_schema: buildMetaSchema([]) },
 ];
 
