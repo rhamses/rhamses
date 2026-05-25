@@ -1,5 +1,5 @@
 import { int, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { prefixedTable } from "../table-prefix.ts";
+import { tableName } from "../table-prefix.ts";
 
 /**
  * Capacidades por perfil (role).
@@ -16,7 +16,7 @@ import { prefixedTable } from "../table-prefix.ts";
  * - menu.full: ver menu completo (oculto para leitor)
  */
 export const roleCapability = sqliteTable(
-  prefixedTable("role_capability"),
+  tableName("role_capability"),
   {
     roleId: int("role_id").notNull(),
     capability: text("capability").notNull(),

@@ -32,6 +32,17 @@ import {
 
 // Meta Schema
 export { defaultMetaSchema, buildMetaSchema, type MetaSchemaItem } from "./schema/meta_schema.ts";
+export {
+  TABLE_PREFIX,
+  EDP_TABLES,
+  EDP_LOGICAL_TABLES,
+  tableName,
+  indexName,
+  logicalTableName,
+  prefixedTable,
+  stripTablePrefix,
+  resolvePhysicalTableName,
+} from "./table-prefix.ts";
 
 // Export tables
 export { postTypes, posts, taxonomies, postsTaxonomies, postsMedia, seoMetadata, settings, roleCapability, locales, translations, translationsLanguages };
@@ -62,4 +73,3 @@ export {
   USER_ROLE_LABEL_KEYS,
 };
 
-export { TABLE_PREFIX, prefixedTable, stripTablePrefix } from "./table-prefix.ts";

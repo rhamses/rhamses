@@ -1,6 +1,6 @@
 import { index, int, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
-import { prefixedTable } from "../table-prefix.ts";
+import { indexName, tableName } from "../table-prefix.ts";
 import { translations } from "./translations.ts";
 import { locales } from "./locales.ts";
 
@@ -9,7 +9,7 @@ import { locales } from "./locales.ts";
  * Armazena as traduções de cada chave para cada locale
  */
 export const translationsLanguages = sqliteTable(
-  prefixedTable("translations_languages"),
+  tableName("translations_languages"),
   {
     id: int().primaryKey({ autoIncrement: true }),
     id_translations: int("id_translations")
@@ -21,17 +21,17 @@ export const translationsLanguages = sqliteTable(
     value: text().notNull(),
   },
   (table) => ({
-    translationsIdIdx: index("translations_languages_id_translations_idx").on(
+    translationsIdIdx: index(indexName("translations_languages_id_translations_idx")).on(
       table.id_translations
     ),
-    localeCodeIdIdx: index("translations_languages_id_locale_code_idx").on(
+    localeCodeIdIdx: index(indexName("translations_languages_id_locale_code_idx")).on(
       table.id_locale_code
     ),
-    translationsLocaleIdx: index("translations_languages_translations_locale_idx").on(
+    translationsLocaleIdx: index(indexName("translations_languages_translations_locale_idx")).on(
       table.id_translations,
       table.id_locale_code
     ),
-    uniqueTranslationLocale: unique("translations_languages_unique_translation_locale").on(
+    uniqueTranslationLocale: unique(indexName("translations_languages_unique_translation_locale")).on(
       table.id_translations,
       table.id_locale_code
     ),
@@ -40,7 +40,6 @@ export const translationsLanguages = sqliteTable(
 
 /**
  * Relações da tabela translations_languages
- * Nota: localesRelations e translationsRelations ficam aqui para evitar imports circulares
  */
 export const translationsLanguagesRelations = relations(
   translationsLanguages,
@@ -55,11 +54,3 @@ export const translationsLanguagesRelations = relations(
     }),
   })
 );
-
-export const localesRelations = relations(locales, ({ many }) => ({
-  translationsLanguages: many(translationsLanguages),
-}));
-
-export const translationsRelations = relations(translations, ({ many }) => ({
-  translationsLanguages: many(translationsLanguages),
-}));

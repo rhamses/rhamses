@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "../../db/index.ts";
+import { EDP_TABLES } from "../../db/table-prefix.ts";
 import { locales, postTypes, posts, postsTaxonomies, taxonomies } from "../../db/schema.ts";
 import { parseMetaValues } from "../../utils/meta-parser.ts";
 import { getPostCustomFields } from "../../utils/content-post-payload.ts";
@@ -116,8 +117,8 @@ async function resolveAttachmentUrl(attachmentId: unknown): Promise<string> {
 
   const rows = (await db.all(sql.raw(`
     SELECT p.meta_values
-    FROM posts p
-    INNER JOIN post_types pt ON p.post_type_id = pt.id
+    FROM ${EDP_TABLES.posts} p
+    INNER JOIN ${EDP_TABLES.post_types} pt ON p.post_type_id = pt.id
     WHERE p.id = ${id} AND pt.slug = 'attachment'
     LIMIT 1
   `))) as { meta_values: string | null }[];
@@ -218,9 +219,9 @@ const POST_SELECT_SQL = `
     p.meta_values,
     pt.slug AS post_type_slug,
     l.locale_code AS locale_code
-  FROM posts p
-  INNER JOIN post_types pt ON p.post_type_id = pt.id
-  LEFT JOIN locales l ON p.id_locale_code = l.id
+  FROM ${EDP_TABLES.posts} p
+  INNER JOIN ${EDP_TABLES.post_types} pt ON p.post_type_id = pt.id
+  LEFT JOIN ${EDP_TABLES.locales} l ON p.id_locale_code = l.id
 `;
 
 function localeSqlFilter(lang?: string): string {
@@ -383,11 +384,11 @@ export class ThemeContentGateway {
         p.meta_values,
         pt.slug AS post_type_slug,
         l.locale_code AS locale_code
-      FROM posts p
-      INNER JOIN post_types pt ON p.post_type_id = pt.id
-      LEFT JOIN locales l ON p.id_locale_code = l.id
-      INNER JOIN posts_taxonomies ptax ON ptax.post_id = p.id
-      INNER JOIN taxonomies t ON t.id = ptax.term_id
+      FROM ${EDP_TABLES.posts} p
+      INNER JOIN ${EDP_TABLES.post_types} pt ON p.post_type_id = pt.id
+      LEFT JOIN ${EDP_TABLES.locales} l ON p.id_locale_code = l.id
+      INNER JOIN ${EDP_TABLES.posts_taxonomies} ptax ON ptax.post_id = p.id
+      INNER JOIN ${EDP_TABLES.taxonomies} t ON t.id = ptax.term_id
       WHERE p.status = 'published'
         AND t.type = 'category'
         AND t.slug = '${safeCategory}'
@@ -424,11 +425,11 @@ export class ThemeContentGateway {
         p.meta_values,
         pt.slug AS post_type_slug,
         l.locale_code AS locale_code
-      FROM posts p
-      INNER JOIN post_types pt ON p.post_type_id = pt.id
-      LEFT JOIN locales l ON p.id_locale_code = l.id
-      INNER JOIN posts_taxonomies ptax ON ptax.post_id = p.id
-      INNER JOIN taxonomies t ON t.id = ptax.term_id
+      FROM ${EDP_TABLES.posts} p
+      INNER JOIN ${EDP_TABLES.post_types} pt ON p.post_type_id = pt.id
+      LEFT JOIN ${EDP_TABLES.locales} l ON p.id_locale_code = l.id
+      INNER JOIN ${EDP_TABLES.posts_taxonomies} ptax ON ptax.post_id = p.id
+      INNER JOIN ${EDP_TABLES.taxonomies} t ON t.id = ptax.term_id
       WHERE p.status = 'published'
         AND t.type = 'categorias'
         AND (

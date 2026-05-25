@@ -1,12 +1,14 @@
 import { index, int, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { prefixedTable } from "../table-prefix.ts";
+import { relations } from "drizzle-orm";
+import { indexName, tableName } from "../table-prefix.ts";
+import { translationsLanguages } from "./translations_languages.ts";
 
 /**
  * Tabela de traduções
  * Armazena chaves de tradução organizadas por namespace
  */
 export const translations = sqliteTable(
-  prefixedTable("translations"),
+  tableName("translations"),
   {
     id: int().primaryKey({ autoIncrement: true }),
     namespace: text("namespace").notNull(),
@@ -15,11 +17,18 @@ export const translations = sqliteTable(
     updated_at: int("updated_at"),
   },
   (table) => ({
-    namespaceIdx: index("translations_namespace_idx").on(table.namespace),
-    keyIdx: index("translations_key_idx").on(table.key),
-    namespaceKeyIdx: index("translations_namespace_key_idx").on(
+    namespaceIdx: index(indexName("translations_namespace_idx")).on(table.namespace),
+    keyIdx: index(indexName("translations_key_idx")).on(table.key),
+    namespaceKeyIdx: index(indexName("translations_namespace_key_idx")).on(
       table.namespace,
       table.key
     ),
   })
 );
+
+/**
+ * Relações da tabela translations
+ */
+export const translationsRelations = relations(translations, ({ many }) => ({
+  translationsLanguages: many(translationsLanguages),
+}));

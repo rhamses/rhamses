@@ -1,6 +1,13 @@
 import { sql } from "drizzle-orm";
 import type { Database } from "./types/database.ts";
-import { stripTablePrefix } from "../db/table-prefix.ts";
+import {
+  TABLE_PREFIX,
+  EDP_LOGICAL_TABLES,
+  logicalTableName,
+  prefixedTable,
+  resolvePhysicalTableName,
+  stripTablePrefix,
+} from "../db/table-prefix.ts";
 import {
   type KVLike,
   getCacheKvFromLocals,
@@ -20,13 +27,14 @@ export const VALID_TABLE_IDENTIFIER = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
  */
 export async function getTableNames(db: Database): Promise<string[]> {
   const rows = await db.all(
-    sql`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'drizzle%'`
+    sql`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'drizzle%' AND name NOT LIKE 'd1_%'`
   );
   if (!Array.isArray(rows)) return [];
   return rows
     .map((row: unknown) => String((row as { name?: string })?.name ?? ""))
-    .filter(Boolean)
-    .map(stripTablePrefix);
+    .filter((name) => name.startsWith(TABLE_PREFIX))
+    .map((name) => logicalTableName(name))
+    .filter((name) => (EDP_LOGICAL_TABLES as readonly string[]).includes(name));
 }
 
 export { prefixedTable, stripTablePrefix, TABLE_PREFIX } from "../db/table-prefix.ts";
@@ -37,7 +45,7 @@ export { prefixedTable, stripTablePrefix, TABLE_PREFIX } from "../db/table-prefi
  */
 export function getSafeTableName(param: string, allowedTables: string[]): string | null {
   if (!VALID_TABLE_IDENTIFIER.test(param) || !allowedTables.includes(param)) return null;
-  return param;
+  return resolvePhysicalTableName(param);
 }
 
 /**

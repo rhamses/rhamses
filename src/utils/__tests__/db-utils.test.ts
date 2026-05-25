@@ -36,8 +36,8 @@ describe("db-utils", () => {
   });
 
   describe("getSafeTableName", () => {
-    it("retorna param quando válido e permitido", () => {
-      expect(getSafeTableName("posts", ["posts", "settings"])).toBe("posts");
+    it("retorna nome físico quando param lógico é válido e permitido", () => {
+      expect(getSafeTableName("posts", ["posts", "settings"])).toBe("edp_posts");
     });
 
     it("retorna null quando param não está na lista", () => {
