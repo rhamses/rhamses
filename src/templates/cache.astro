@@ -3,9 +3,14 @@
  * Template da página "Cache" em Settings: lista chaves/valores do KV e botão para resetar cache.
  */
 import AdminLayout from "../layouts/AdminLayout.astro";
-import DataList from "../components/DataList.astro";
+import DataListPanel from "../components/DataListPanel.astro";
 import { t, type Locale } from "../i18n/index.ts";
 import type { MenuItem } from "../lib/menu.ts";
+import {
+  buildUrlWithParams,
+  filterItemsClientSide,
+  parseFilterParams,
+} from "../lib/list-utils.ts";
 
 export interface Props {
   locale: string;
@@ -18,7 +23,7 @@ const { locale, menuItems, currentUser, kvItems } = Astro.props;
 const currentLocale = locale as Locale;
 
 const pageTitle = t(currentLocale, "admin.cache.title");
-const searchQuery = (Astro.url.searchParams.get("q") ?? "").trim();
+const filter = parseFilterParams(Astro.url.searchParams);
 const page = Math.max(1, parseInt(Astro.url.searchParams.get("page") ?? "1", 10) || 1);
 const perPage = 20;
 
@@ -27,52 +32,43 @@ const getT = (key: string, fallback: string) => {
   return translated !== key ? translated : fallback;
 };
 
-const normalizedSearch = searchQuery.toLowerCase();
-const filteredKvItems = normalizedSearch
-  ? kvItems.filter(
-      (item) =>
-        item.key.toLowerCase().includes(normalizedSearch) ||
-        item.valuePreview.toLowerCase().includes(normalizedSearch),
-    )
-  : kvItems;
-
-const total = filteredKvItems.length;
-const totalPages = Math.max(1, Math.ceil(total / perPage));
-const currentPage = Math.min(page, totalPages);
-const start = (currentPage - 1) * perPage;
-const end = start + perPage;
-const paginatedKvItems = filteredKvItems.slice(start, end);
-
-const buildCacheUrl = (nextPage: number) => {
-  const params = new URLSearchParams(Astro.url.searchParams);
-  params.set("page", String(nextPage));
-  if (searchQuery) {
-    params.set("q", searchQuery);
-  } else {
-    params.delete("q");
-  }
-  return `${Astro.url.pathname}?${params.toString()}`;
-};
-
 const columns = [
   { key: "key", label: t(currentLocale, "admin.cache.key") },
   { key: "valuePreview", label: t(currentLocale, "admin.cache.valuePreview") },
 ];
 
-const listItems = paginatedKvItems.map((item) => ({
-  key: item.key,
-  valuePreview: item.valuePreview,
-}));
+const filteredKvItems = filterItemsClientSide(
+  kvItems.map((item) => ({ key: item.key, valuePreview: item.valuePreview })),
+  filter,
+  columns.map((col) => col.key),
+);
+const total = filteredKvItems.length;
+const totalPages = Math.max(1, Math.ceil(total / perPage));
+const currentPage = Math.min(page, totalPages);
+const start = (currentPage - 1) * perPage;
+const end = start + perPage;
+const listItems = filteredKvItems.slice(start, end);
+
+const buildCacheUrl = (nextPage: number) =>
+  buildUrlWithParams(Astro.url.pathname, Astro.url.searchParams, {
+    page: String(nextPage),
+  });
+
+const filterClearHref = buildUrlWithParams(Astro.url.pathname, Astro.url.searchParams, {
+  page: "1",
+  filter_key: null,
+  filter_valuePreview: null,
+});
+
+const cacheHiddenFields: Record<string, string> = {};
+const domainParam = Astro.url.searchParams.get("domain");
+if (domainParam) cacheHiddenFields["domain"] = domainParam;
 
 const resetConfirm =
   t(currentLocale, "admin.cache.resetConfirm") !== "admin.cache.resetConfirm"
     ? t(currentLocale, "admin.cache.resetConfirm")
     : "Tem certeza que deseja resetar todo o cache? Todas as chaves serão removidas.";
 const resetButtonLabel = t(currentLocale, "admin.cache.resetButton");
-const searchLabel = getT("admin.cache.searchLabel", "Buscar");
-const searchPlaceholder = getT("admin.cache.searchPlaceholder", "Buscar por chave ou valor");
-const searchButtonLabel = getT("admin.cache.searchButton", "Filtrar");
-const clearButtonLabel = getT("admin.cache.clearSearch", "Limpar");
 const previousLabel = getT("admin.list.previous", "Anterior");
 const nextLabel = getT("admin.list.next", "Próxima");
 const pageOfText = getT("admin.list.pageOf", "Página {page} de {totalPages} ({total} itens)")
@@ -88,35 +84,36 @@ const pageOfText = getT("admin.list.pageOf", "Página {page} de {totalPages} ({t
 
   <div class="p-6" x-data="{ loading: false }">
     <div class="flex flex-col gap-4">
-      <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <form method="get" action={Astro.url.pathname} class="flex flex-wrap items-end gap-2">
-          <div class="form-control">
-            <label class="label py-0">
-              <span class="label-text text-xs">{searchLabel}</span>
-            </label>
-            <input
-              type="text"
-              name="q"
-              value={searchQuery}
-              placeholder={searchPlaceholder}
-              class="input input-bordered input-sm w-72 max-w-full"
-            />
-          </div>
-          <input type="hidden" name="page" value="1" />
-          <button type="submit" class="btn btn-primary btn-sm">{searchButtonLabel}</button>
-          {
-            searchQuery && (
-              <a href={Astro.url.pathname} class="btn btn-ghost btn-sm">
-                {clearButtonLabel}
-              </a>
-            )
-          }
-        </form>
+      <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div class="flex-1 min-w-0">
+          <DataListPanel
+            columns={columns}
+            items={listItems}
+            action={Astro.url.pathname}
+            hiddenFields={cacheHiddenFields}
+            filterValues={filter}
+            filterPlaceholder={t(currentLocale, "admin.list.filter")}
+            filterSubmitLabel={t(currentLocale, "admin.list.filterSubmit")}
+            filterClearLabel={t(currentLocale, "admin.list.filterClear")}
+            filterClearHref={filterClearHref}
+            emptyMessage={t(currentLocale, "admin.cache.noItems")}
+            emptyColspan={2}
+            pagination={{
+              page: currentPage,
+              totalPages,
+              total,
+              buildPageUrl: (nextPage) => buildCacheUrl(nextPage),
+            }}
+            previousLabel={previousLabel}
+            nextLabel={nextLabel}
+            pageOfText={pageOfText}
+          />
+        </div>
 
         <button
           type="button"
           id="cache-reset-btn"
-          class="btn btn-error text-white"
+          class="btn btn-error text-white shrink-0"
           hx-get="/api/kv-clear"
           hx-trigger="click"
           hx-confirm={resetConfirm}
@@ -129,22 +126,6 @@ const pageOfText = getT("admin.list.pageOf", "Página {page} de {totalPages} ({t
           <span x-show="loading" x-cloak>…</span>
         </button>
       </div>
-
-      <DataList
-        columns={columns}
-        items={listItems}
-        emptyMessage={t(currentLocale, "admin.cache.noItems")}
-        emptyColspan={2}
-        pagination={{
-          page: currentPage,
-          totalPages,
-          total,
-          buildPageUrl: (nextPage) => buildCacheUrl(nextPage),
-        }}
-        previousLabel={previousLabel}
-        nextLabel={nextLabel}
-        pageOfText={pageOfText}
-      />
     </div>
   </div>
 </AdminLayout>

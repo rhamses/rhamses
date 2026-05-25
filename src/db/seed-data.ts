@@ -120,13 +120,30 @@ export const MENU_CONFIG: MenuConfigRow[] = [
     icon: "line-md:document",
   },
   { typeSlug: "page", menu_options: ["list", "new"], menu_order: 3, icon: "line-md:list" },
-  { typeSlug: "settings", menu_options: ["post_types", "list", "new", "cache"], menu_order: 4, icon: "line-md:cog" },
-  { typeSlug: "user", menu_options: ["list", "new"], menu_order: 5, icon: "line-md:account" },
-  { typeSlug: "attachment", menu_options: ["list", "new"], menu_order: 6, icon: "line-md:cloud-alt-upload-loop" },
+  { typeSlug: "attachment", menu_options: ["list", "new"], menu_order: 4, icon: "line-md:cloud-alt-upload-loop" },
+  { typeSlug: "themes", menu_options: ["list", "new"], menu_order: 5, icon: "line-md:paint-drop-twotone" },
+  { typeSlug: "user", menu_options: ["list", "new"], menu_order: 6, icon: "line-md:account" },
   { typeSlug: "translations_languages", menu_options: ["list", "new"], menu_order: 7, icon: "line-md:chat-round-dots" },
-  { typeSlug: "themes", menu_options: ["list", "new"], menu_order: 8, icon: "line-md:paint-drop-twotone" },
+  { typeSlug: "settings", menu_options: ["post_types", "list", "new", "cache"], menu_order: 8, icon: "line-md:cog" },
 ];
 
 /** Post types padrão (slug, name, meta_schema). Re-exportado de default-post-types para centralizar dados de seed. */
 export { DEFAULT_POST_TYPES, META_ONLY_POST_TYPE_SLUGS } from "./default-post-types.ts";
 export type { DefaultPostTypeRow } from "./default-post-types.ts";
+
+/** Linha para tabela settings. */
+export interface SettingsRow {
+  name: string;
+  value: string;
+  autoload: boolean;
+}
+
+/** Settings iniciais (setup_done=N até concluir /setup). */
+export const DEFAULT_SETTINGS_ROWS: SettingsRow[] = [
+  { name: "site_name", value: "demo site", autoload: true },
+  { name: "site_description", value: "demo_description", autoload: true },
+  { name: "setup_done", value: "N", autoload: true },
+  { name: "default_posttype", value: "post", autoload: true },
+  { name: "default_taxonomies", value: "category,tag", autoload: true },
+  { name: "active_theme", value: "2026", autoload: true },
+];

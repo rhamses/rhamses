@@ -65,6 +65,8 @@ export async function getTableNames(db: Database): Promise<string[]> {
     .filter((name) => (EDP_LOGICAL_TABLES as readonly string[]).includes(name));
 }
 
+export { prefixedTable, stripTablePrefix, TABLE_PREFIX } from "../db/table-prefix.ts";
+
 /**
  * Dado um parâmetro de rota e a lista de tabelas permitidas, retorna o nome seguro da tabela ou null.
  * Usado pela API de content para validar [table] e [table]/[id].

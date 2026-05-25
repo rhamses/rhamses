@@ -39,21 +39,13 @@ const MULTICOLUMN_LOCALES: Record<string, { slash_menu: { two_columns: object; t
 const schema = withMultiColumn(BlockNoteSchema.create() as any);
 
 export interface BlockNoteEditorProps {
-  /** Conteúdo inicial em HTML (ex.: body do post). */
   initialBody?: string | null;
-  /** Nome do input hidden enviado no form (ex.: "body"). */
   name?: string;
-  /** Id do input hidden para acessibilidade. */
   inputId?: string;
-  /** Locale do admin (en, es, pt-br) para a UI do BlockNote. */
   locale?: string;
 }
 
-/**
- * Editor BlockNote (estilo Notion) que sincroniza o conteúdo com um input hidden
- * para envio em formulários. Use dentro de <form>.
- */
-export function BlockNoteEditor({
+export default function BlockNoteEditor({
   initialBody,
   name = "body",
   inputId = "body",
@@ -65,27 +57,21 @@ export function BlockNoteEditor({
     return { ...base, multi_column: multiColumn };
   }, [localeProp]);
 
-  // Função de upload para BlockNote (usa a mesma função utilitária do Uppy)
-  // Após upload bem-sucedido, cria um post do tipo attachment
   const uploadFile = useCallback(async (file: File): Promise<string> => {
     try {
       const result = await uploadFileToR2(file);
-      
-      // Criar post do tipo attachment após upload bem-sucedido
+
       try {
         const form = document.getElementById(inputId)?.closest("form");
         if (!form) return result.url;
-        
+
         const localeVal = form.querySelector<HTMLInputElement>('input[name="locale"]')?.value ?? "pt-br";
         const idLocaleCode = form.querySelector<HTMLInputElement>('input[name="id_locale_code"]')?.value;
         const postId = form.querySelector<HTMLInputElement>('input[name="id"]')?.value;
-        const postTypeSlug = form.querySelector<HTMLInputElement>('input[name="post_type"]')?.value?.trim() || "post";
-        
-        // Gerar título e slug únicos para o attachment
+
         const originalFilename = file.name || "untitled";
         const postTitle = originalFilename;
-        
-        // Função slugify simples (mesma lógica do Uppy)
+
         const slugify = (text: string): string => {
           if (typeof text !== "string" || !text.trim()) return "";
           return text
@@ -98,10 +84,10 @@ export function BlockNoteEditor({
             .replace(/-+/g, "-")
             .replace(/^-|-$/g, "");
         };
-        
+
         const postBaseSlug = slugify(originalFilename) || "file";
         const postSlug = `${postBaseSlug}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-        
+
         const fd = new FormData();
         fd.set("post_type", "attachment");
         fd.set("action", "new");
@@ -122,33 +108,31 @@ export function BlockNoteEditor({
         if (result.cloudflareImageId) {
           fd.set("meta_cloudflare_image_id", result.cloudflareImageId);
         }
-        
+
         const res = await fetch("/api/posts", {
           method: "POST",
           body: fd,
           headers: { Accept: "application/json" },
         });
-        
+
         if (res.ok) {
           const data = await res.json();
           const attachmentId = typeof data?.id === "number" ? data.id : null;
-          
-          // Disparar evento para criar relação posts_media quando o formulário for submetido
+
           if (attachmentId) {
             window.dispatchEvent(new CustomEvent("blocknote-image-uploaded", {
               detail: {
                 attachmentId,
                 imageUrl: result.url,
                 path: result.path,
-              }
+              },
             }));
           }
         }
       } catch (attachmentError) {
-        // Se falhar ao criar attachment, apenas loga o erro mas não impede o uso da imagem
         console.error("Failed to create attachment post:", attachmentError);
       }
-      
+
       return result.url;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Upload failed";
@@ -161,7 +145,6 @@ export function BlockNoteEditor({
   const initialLoaded = useRef(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
-  // Sincroniza com data-theme do layout (light/dark)
   useEffect(() => {
     setTheme(getDocumentTheme());
     const observer = new MutationObserver(() => setTheme(getDocumentTheme()));
@@ -169,7 +152,6 @@ export function BlockNoteEditor({
     return () => observer.disconnect();
   }, []);
 
-  // Carrega HTML inicial no editor (uma vez)
   useEffect(() => {
     if (!editor || initialLoaded.current || !initialBody?.trim()) return;
     initialLoaded.current = true;
@@ -192,7 +174,6 @@ export function BlockNoteEditor({
     return (div.textContent ?? div.innerText ?? "").trim().replace(/\s+/g, " ");
   }
 
-  // Sincroniza conteúdo do editor para o input hidden e dispara excerpt (250 chars)
   const syncToInput = () => {
     const input = document.getElementById(inputId) as HTMLInputElement | null;
     if (!input || !editor) return;
@@ -211,11 +192,10 @@ export function BlockNoteEditor({
   useEffect(() => {
     if (!editor) return;
     const unsub = editor.onChange(syncToInput);
-    syncToInput(); // valor inicial
+    syncToInput();
     return unsub;
   }, [editor, inputId]);
 
-  // Garante que o body está sincronizado no submit do form
   useEffect(() => {
     const form = document.getElementById(inputId)?.closest("form");
     if (!form) return;
@@ -235,7 +215,7 @@ export function BlockNoteEditor({
   );
 
   return (
-    <div className="content-editor-wrapper h-full min-h-0 flex flex-col rounded-lg overflow-hidden bg-base-100">
+    <div className="content-editor-wrapper flex min-h-[480px] w-full flex-col rounded-lg bg-base-100">
       <input
         type="hidden"
         id={inputId}
@@ -247,7 +227,7 @@ export function BlockNoteEditor({
       <BlockNoteView
         editor={editor as any}
         theme={theme}
-        className="flex-1 min-h-0 w-full [&_.bn-editor]:min-h-full"
+        className="min-h-[480px] w-full flex-1 [&_.bn-editor]:min-h-[480px]"
         slashMenu={false}
       >
         <SuggestionMenuController triggerCharacter="/" getItems={getSlashMenuItems} />
