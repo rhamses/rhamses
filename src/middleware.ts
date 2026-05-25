@@ -58,6 +58,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.redirect("/login", 303);
   }
 
+  // Links do menu admin usam /post?domain=... — redireciona para /admin/{locale}/post?...
+  // antes do rewrite do tema público (senão abre /themes/2026/post sem layout admin).
+  const hasAdminMenuQuery =
+    context.url.searchParams.has("domain") || context.url.searchParams.has("page");
+  if (!isApi && !pathname.startsWith("/admin/") && hasAdminMenuQuery) {
+    const slug = pathname.replace(/^\/+|\/+$/g, "");
+    if (slug && !slug.includes("/") && !pathname.startsWith("/themes/")) {
+      return context.redirect(
+        `/admin/${defaultLocale}/${slug}${context.url.search}`,
+        303,
+      );
+    }
+  }
+
   // URLs públicas não devem expor /themes/* (rota interna).
   // Quando acessado publicamente, reescrevemos internamente a mesma URL
   // adicionando `x-edgepress-internal-rewrite: 1` para evitar loops.
