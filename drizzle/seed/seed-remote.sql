@@ -1,6 +1,47 @@
 -- Seed remoto (idempotente). Gerado por scripts/generate-seed-sql.ts
 -- Fonte: seed-data + default-post-types + i18n/languages/*.json (mesmos dados que runSeed)
 
+-- Schema mínimo (idempotente) antes dos INSERTs
+CREATE TABLE IF NOT EXISTS edp_locales (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  language TEXT NOT NULL,
+  hello_world TEXT NOT NULL,
+  locale_code TEXT NOT NULL UNIQUE,
+  country TEXT NOT NULL,
+  timezone TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS locales_locale_code_idx ON edp_locales (locale_code);
+CREATE INDEX IF NOT EXISTS locales_language_idx ON edp_locales (language);
+
+CREATE TABLE IF NOT EXISTS edp_translations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  namespace TEXT NOT NULL,
+  key TEXT NOT NULL,
+  created_at INTEGER,
+  updated_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS translations_namespace_idx ON edp_translations (namespace);
+CREATE INDEX IF NOT EXISTS translations_key_idx ON edp_translations (key);
+CREATE INDEX IF NOT EXISTS translations_namespace_key_idx ON edp_translations (namespace, key);
+
+CREATE TABLE IF NOT EXISTS edp_translations_languages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  id_translations INTEGER NOT NULL REFERENCES edp_translations(id) ON DELETE CASCADE,
+  id_locale_code INTEGER NOT NULL REFERENCES edp_locales(id) ON DELETE CASCADE,
+  value TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS translations_languages_id_translations_idx ON edp_translations_languages (id_translations);
+CREATE INDEX IF NOT EXISTS translations_languages_id_locale_code_idx ON edp_translations_languages (id_locale_code);
+CREATE INDEX IF NOT EXISTS translations_languages_translations_locale_idx ON edp_translations_languages (id_translations, id_locale_code);
+CREATE UNIQUE INDEX IF NOT EXISTS translations_languages_unique_translation_locale ON edp_translations_languages (id_translations, id_locale_code);
+
+CREATE TABLE IF NOT EXISTS edp_role_capability (
+  role_id INTEGER NOT NULL,
+  capability TEXT NOT NULL,
+  PRIMARY KEY (role_id, capability)
+);
+
+
 -- Locales (idiomas/países + en_US, es_ES, pt_BR para i18n)
 INSERT OR IGNORE INTO edp_locales (language, hello_world, locale_code, country, timezone) VALUES
   ('English', 'Hello World', 'en', 'United States', 'UTC-5'),
@@ -47,8 +88,8 @@ INSERT OR IGNORE INTO edp_locales (language, hello_world, locale_code, country, 
 
 -- Post types padrão (post, page, dashboard, settings, user, attachment, etc.)
 INSERT OR IGNORE INTO edp_post_types (slug, name, meta_schema, created_at, updated_at) VALUES
-  ('post', 'Post', '[{"key":"menu_order","type":"number","default":0},{"key":"parent_id","type":"number"},{"key":"show_in_menu","type":"boolean","default":false},{"key":"menu_options","type":"array","default":[]},{"key":"icon","type":"string","default":"line-md:document"},{"key":"post_thumbnail","type":"boolean","default":true},{"key":"taxonomy","type":"array","default":["category","tag"]},{"key":"edp_post_types","type":"array","default":["custom_fields"]}]', 0, 0),
-  ('page', 'Página', '[{"key":"menu_order","type":"number","default":0},{"key":"parent_id","type":"number"},{"key":"show_in_menu","type":"boolean","default":false},{"key":"menu_options","type":"array","default":[]},{"key":"icon","type":"string","default":"line-md:document"},{"key":"post_thumbnail","type":"boolean","default":true},{"key":"edp_post_types","type":"array","default":["custom_fields"]}]', 0, 0),
+  ('post', 'Post', '[{"key":"menu_order","type":"number","default":0},{"key":"parent_id","type":"number"},{"key":"show_in_menu","type":"boolean","default":false},{"key":"menu_options","type":"array","default":[]},{"key":"icon","type":"string","default":"line-md:document"},{"key":"post_thumbnail","type":"boolean","default":true},{"key":"taxonomy","type":"array","default":["category","tag"]},{"key":"post_types","type":"array","default":["custom_fields"]}]', 0, 0),
+  ('page', 'Página', '[{"key":"menu_order","type":"number","default":0},{"key":"parent_id","type":"number"},{"key":"show_in_menu","type":"boolean","default":false},{"key":"menu_options","type":"array","default":[]},{"key":"icon","type":"string","default":"line-md:document"},{"key":"post_thumbnail","type":"boolean","default":true},{"key":"post_types","type":"array","default":["custom_fields"]}]', 0, 0),
   ('dashboard', 'Dashboard', '[{"key":"menu_order","type":"number","default":0},{"key":"parent_id","type":"number"},{"key":"show_in_menu","type":"boolean","default":false},{"key":"menu_options","type":"array","default":[]},{"key":"icon","type":"string","default":"line-md:document"},{"key":"post_thumbnail","type":"boolean","default":false}]', 0, 0),
   ('settings', 'Configurações', '[{"key":"menu_order","type":"number","default":0},{"key":"parent_id","type":"number"},{"key":"show_in_menu","type":"boolean","default":false},{"key":"menu_options","type":"array","default":[]},{"key":"icon","type":"string","default":"line-md:document"},{"key":"post_thumbnail","type":"boolean","default":false}]', 0, 0),
   ('user', 'User', '[{"key":"menu_order","type":"number","default":0},{"key":"parent_id","type":"number"},{"key":"show_in_menu","type":"boolean","default":false},{"key":"menu_options","type":"array","default":[]},{"key":"icon","type":"string","default":"line-md:document"},{"key":"post_thumbnail","type":"boolean","default":false}]', 0, 0),
@@ -647,11 +688,11 @@ INSERT OR REPLACE INTO edp_translations_languages (id_translations, id_locale_co
 INSERT OR REPLACE INTO edp_translations_languages (id_translations, id_locale_code, value) SELECT (SELECT id FROM edp_translations WHERE namespace='admin.postTypes' AND key='confirmYes' LIMIT 1), (SELECT id FROM edp_locales WHERE locale_code='pt_BR' LIMIT 1), 'Sim';
 
 -- Posts iniciais de menu (um por post type, show_in_menu=true)
-INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='dashboard' LIMIT 1), 'dashboard', 'menu-dashboard', 'published', '{"show_in_menu":true,"menu_options":["dashboard"],"menu_order":1,"icon":"line-md:home","edp_post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-dashboard');
-INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='post' LIMIT 1), 'post', 'menu-post', 'published', '{"show_in_menu":true,"menu_options":["list","new","taxonomies_type_category","taxonomies_type_tag"],"menu_order":2,"icon":"line-md:document","edp_post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-post');
-INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='page' LIMIT 1), 'page', 'menu-page', 'published', '{"show_in_menu":true,"menu_options":["list","new"],"menu_order":3,"icon":"line-md:list","edp_post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-page');
-INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='settings' LIMIT 1), 'settings', 'menu-settings', 'published', '{"show_in_menu":true,"menu_options":["edp_post_types","list","new","cache"],"menu_order":4,"icon":"line-md:cog","edp_post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-settings');
-INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='user' LIMIT 1), 'user', 'menu-user', 'published', '{"show_in_menu":true,"menu_options":["list","new"],"menu_order":5,"icon":"line-md:account","edp_post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-user');
-INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='attachment' LIMIT 1), 'attachment', 'menu-attachment', 'published', '{"show_in_menu":true,"menu_options":["list","new"],"menu_order":6,"icon":"line-md:cloud-alt-upload-loop","edp_post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-attachment');
-INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='translations_languages' LIMIT 1), 'translations_languages', 'menu-translations_languages', 'published', '{"show_in_menu":true,"menu_options":["list","new"],"menu_order":7,"icon":"line-md:chat-round-dots","edp_post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-translations_languages');
-INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='themes' LIMIT 1), 'themes', 'menu-themes', 'published', '{"show_in_menu":true,"menu_options":["list","new"],"menu_order":8,"icon":"line-md:paint-drop-twotone","edp_post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-themes');
+INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='dashboard' LIMIT 1), 'dashboard', 'menu-dashboard', 'published', '{"show_in_menu":true,"menu_options":["dashboard"],"menu_order":1,"icon":"line-md:home","post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-dashboard');
+INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='post' LIMIT 1), 'post', 'menu-post', 'published', '{"show_in_menu":true,"menu_options":["list","new","taxonomies_type_category","taxonomies_type_tag"],"menu_order":2,"icon":"line-md:document","post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-post');
+INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='page' LIMIT 1), 'page', 'menu-page', 'published', '{"show_in_menu":true,"menu_options":["list","new"],"menu_order":3,"icon":"line-md:list","post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-page');
+INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='settings' LIMIT 1), 'settings', 'menu-settings', 'published', '{"show_in_menu":true,"menu_options":["post_types","list","new","cache"],"menu_order":4,"icon":"line-md:cog","post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-settings');
+INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='user' LIMIT 1), 'user', 'menu-user', 'published', '{"show_in_menu":true,"menu_options":["list","new"],"menu_order":5,"icon":"line-md:account","post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-user');
+INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='attachment' LIMIT 1), 'attachment', 'menu-attachment', 'published', '{"show_in_menu":true,"menu_options":["list","new"],"menu_order":6,"icon":"line-md:cloud-alt-upload-loop","post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-attachment');
+INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='translations_languages' LIMIT 1), 'translations_languages', 'menu-translations_languages', 'published', '{"show_in_menu":true,"menu_options":["list","new"],"menu_order":7,"icon":"line-md:chat-round-dots","post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-translations_languages');
+INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM edp_post_types WHERE slug='themes' LIMIT 1), 'themes', 'menu-themes', 'published', '{"show_in_menu":true,"menu_options":["list","new"],"menu_order":8,"icon":"line-md:paint-drop-twotone","post_types":["custom_fields"]}', 0, 0 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-themes');
