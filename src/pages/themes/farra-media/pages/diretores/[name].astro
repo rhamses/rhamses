@@ -1,7 +1,7 @@
 ---
 import Layout from "../../layouts/default.astro";
 import { getLanguageFromUrl, useTranslations } from "../../i18n/utils";
-import { GetDiretores, directorSlug } from "../../helpers/helpers";
+import { GetDiretores, directorSlug, postThumbnailUrl } from "../../helpers/helpers";
 import { themeRouteParam, themeRedirect } from "../../helpers/route";
 import { Image, Picture } from "astro:assets";
 import Icons from "../../components/icons.astro";
@@ -60,6 +60,7 @@ if (typeof post.socialMedia === "string") {
 const linkVimeo = post?.socialMedia
   ? post.socialMedia.find((p: any) => p.includes("vimeo"))
   : "#";
+const directorImage = postThumbnailUrl(post);
 ---
 
 <style is:global>
@@ -264,7 +265,9 @@ const linkVimeo = post?.socialMedia
   }
   <section class="firstfold">
     <h3 class="image--wrapper">
-      <Image src={post.image} alt={post.title} width="500" height="300" />
+      {directorImage ? (
+        <Image src={directorImage} alt={post.title} width="500" height="300" />
+      ) : null}
     </h3>
     <article class="xs1">
       <div class="text-justify" set:html={post?.body ?? ""} />
