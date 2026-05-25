@@ -4,7 +4,7 @@ CMS inspirado no WordPress que roda na **edge** (Cloudflare). Conteúdo dinâmic
 
 ## Stack
 
-- **[Astro](https://astro.build)** (SSR) + **[Cloudflare Pages](https://pages.cloudflare.com/)**
+- **[Astro](https://astro.build)** (SSR) + **[Cloudflare Workers](https://workers.cloudflare.com/)**
 - **D1** (SQLite) + **Drizzle ORM** — banco de dados
 - **KV** — cache para leituras (settings, i18n, conteúdo)
 - **R2** — armazenamento de mídia (uploads)
@@ -119,7 +119,7 @@ Abre o Drizzle Studio para inspecionar/editar dados (conexão local).
 ## Build e deploy
 
 ```bash
-# Build para Cloudflare Pages
+# Build para Cloudflare Workers
 npm run build
 ```
 
@@ -129,7 +129,14 @@ Para CI ou deploy com migrações e seed no D1 remoto:
 npm run build:seed
 ```
 
-O output vai para `./dist` (configurado em `wrangler.toml` como `pages_build_output_dir`). Conecte o repositório ao **Cloudflare Pages** e use o comando de build `npm run build` (ou `build:seed` se quiser rodar migrações/seed no pipeline). Configure as variáveis de ambiente e secrets no dashboard.
+Deploy manual após o build:
+
+```bash
+npm run deploy          # production (vars do top-level do wrangler.toml)
+npm run deploy:preview  # preview/staging (--env preview)
+```
+
+O Worker usa `dist/server/entry.mjs` com assets estáticos em `dist/client` (ver `wrangler.toml`). Configure secrets com `wrangler secret put` (ex.: `BETTER_AUTH_SECRET`, `RESEND_API_KEY`). Variáveis públicas ficam em `[vars]` / `[env.preview.vars]`.
 
 ### Importação de tema via GitHub + R2
 
@@ -160,7 +167,6 @@ Secrets esperados para o workflow de deploy do app (`deploy-app.yml`):
 - `R2_BUCKET`
 - `CLOUDFLARE_API_TOKEN` (para deploy)
 - `CLOUDFLARE_ACCOUNT_ID` (para deploy)
-- `CLOUDFLARE_PAGES_PROJECT_NAME` (para deploy)
 
 Variáveis esperadas no runtime do Edgepress:
 
