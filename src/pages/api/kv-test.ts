@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
   if (!kv) {
     return new Response(
-      JSON.stringify({ ok: false, message: "KV (edgepress_cache) not configured" }),
+      JSON.stringify({ ok: false, message: "KV (CACHE) not configured" }),
       { status: 503, headers: { "Content-Type": "application/json" } }
     );
   }

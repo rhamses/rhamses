@@ -26,6 +26,7 @@ import { translationsLanguages, translationsLanguagesRelations } from "./schema/
 
 // Meta Schema
 export { defaultMetaSchema, buildMetaSchema, type MetaSchemaItem } from "./schema/meta_schema.ts";
+export { TABLE_PREFIX, EDP_TABLES, tableName, logicalTableName } from "./table-prefix.ts";
 
 // Export tables
 export { postTypes, posts, taxonomies, postsTaxonomies, postsMedia, settings, roleCapability, locales, translations, translationsLanguages };

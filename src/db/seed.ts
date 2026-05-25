@@ -342,7 +342,7 @@ export async function runSeed(db: any): Promise<void> {
     { name: "setup_done", value: "N", autoload: true },
     { name: "default_posttype", value: "post", autoload: true },
     { name: "default_taxonomies", value: "category,tag", autoload: true },
-    { name: "active_theme", value: "2026", autoload: true },
+    { name: "active_theme", value: "farra-media", autoload: true },
   ];
   const existingSettings = await db
     .select({ name: settings.name })

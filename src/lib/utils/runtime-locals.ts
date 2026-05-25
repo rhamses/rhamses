@@ -5,14 +5,14 @@
 
 import { env as cfEnv } from "cloudflare:workers";
 
-/** Tipo do cache KV (edgepress_cache). Compatível com App.KVLike em env.d.ts. */
+/** Tipo do cache KV (binding CACHE). Compatível com App.KVLike em env.d.ts. */
 export type KVLike = App.KVLike;
 
 /**
- * Retorna a instância do KV (edgepress_cache), ou null se não disponível.
+ * Retorna a instância do KV (CACHE), ou null se não disponível.
  */
 export function getKvFromLocals(_locals: App.Locals): KVLike | null {
-  const kv = cfEnv.edgepress_cache;
+  const kv = cfEnv.CACHE;
   return kv != null ? (kv as unknown as KVLike) : null;
 }
 

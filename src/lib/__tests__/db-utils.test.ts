@@ -36,8 +36,8 @@ describe("db-utils", () => {
   });
 
   describe("getSafeTableName", () => {
-    it("retorna param quando válido e permitido", () => {
-      expect(getSafeTableName("posts", ["posts", "settings"])).toBe("posts");
+    it("retorna nome físico quando param lógico é válido e permitido", () => {
+      expect(getSafeTableName("posts", ["posts", "settings"])).toBe("edp_posts");
     });
 
     it("retorna null quando param não está na lista", () => {
@@ -61,7 +61,7 @@ describe("db-utils", () => {
 
   describe("getContentApiRuntime", () => {
     it("retorna isAuthenticated true e kv null quando user presente", () => {
-      env.edgepress_cache = {};
+      env.CACHE = {};
       const locals = {
         user: { id: "1", email: "a@b.com" },
       } as App.Locals;
@@ -72,7 +72,7 @@ describe("db-utils", () => {
 
     it("retorna isAuthenticated false e kv quando user ausente e KV presente", () => {
       const mockKv = { get: async () => null, put: async () => {} };
-      env.edgepress_cache = mockKv;
+      env.CACHE = mockKv;
       const locals = {
         user: null,
         session: null,
