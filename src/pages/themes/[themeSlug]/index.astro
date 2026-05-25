@@ -7,25 +7,10 @@ if (!themeSlug) {
   return new Response("Theme not found", { status: 404 });
 }
 
-const modulePathPackaged = `../${themeSlug}/__theme__/pages/index.astro`;
-const modulePathFlat = `../${themeSlug}/pages/index.astro`;
-const themePages = {
-  ...import.meta.glob("../*/pages/**/*.astro"),
-  ...import.meta.glob("../*/__theme__/pages/**/*.astro"),
-};
-const loadThemePage =
-  themePages[modulePathFlat] ?? themePages[modulePathPackaged];
-
-if (!loadThemePage) {
-  return new Response("Theme page not found", { status: 404 });
-}
-
-const themeModule = (await loadThemePage()) as { default?: unknown };
-const ThemePage = themeModule.default as any;
-
-if (!ThemePage) {
-  return new Response("Invalid theme page module", { status: 500 });
-}
+/**
+ * A home do tema precisa ser servida pela rota real em pages/index.astro
+ * para que o Astro injete os <style> dos componentes (import hummingbird + scoped CSS).
+ * renderComponent aqui deixava a home sem CSS (~0 blocos <style> vs ~19 nas demais páginas).
+ */
+return Astro.rewrite(`/themes/${themeSlug}/pages/`);
 ---
-
-<ThemePage {...Astro.props} />

@@ -108,7 +108,7 @@ export async function getListItems(
       .innerJoin(taxonomies, eq(postsTaxonomies.term_id, taxonomies.id))
       .where(
         and(
-          eq(taxonomies.type, "category"),
+          ne(taxonomies.type, "tag"),
           like(taxonomies.name, `%${filter.categories}%`),
         ),
       );
@@ -196,10 +196,10 @@ export async function getListItems(
     tagsByPost[id] = [];
   }
   for (const row of termRows) {
-    if (row.type === "category") {
-      categoriesByPost[row.post_id]?.push(row.name ?? "");
-    } else if (row.type === "tag") {
+    if (row.type === "tag") {
       tagsByPost[row.post_id]?.push(row.name ?? "");
+    } else {
+      categoriesByPost[row.post_id]?.push(row.name ?? "");
     }
   }
 

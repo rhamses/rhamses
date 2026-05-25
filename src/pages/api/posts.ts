@@ -25,6 +25,12 @@ import {
   getString,
 } from "../../lib/utils/form-data.ts";
 
+import { applyJobsCustomFieldsToMeta } from "../../lib/jobs-custom-fields.ts";
+import {
+  applyDiretoresCustomFieldsToMeta,
+  postHasDiretoresCategory,
+} from "../../lib/diretores-custom-fields.ts";
+
 // Utils - Validation & Parsing
 import {
   normalizePostStatus,
@@ -558,6 +564,17 @@ export async function POST({
                   created_at: now,
                   updated_at: now,
                 });
+              }
+
+              if (post_type === "jobs") {
+                await applyJobsCustomFieldsToMeta(db, postId, postTypeId, customFieldsItems);
+              } else if (await postHasDiretoresCategory(db, postId)) {
+                await applyDiretoresCustomFieldsToMeta(
+                  db,
+                  postId,
+                  postTypeId,
+                  customFieldsItems,
+                );
               }
             }
           } catch {
