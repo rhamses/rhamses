@@ -45,11 +45,11 @@ id = "00ca0b8ef45143f6aede0d5dd2d32e65"
 
 [[r2_buckets]]
 binding = "MEDIA_BUCKET"
-bucket_name = "edgepress-media"
+bucket_name = "farramedia"
 
 [[env.preview.r2_buckets]]
 binding = "MEDIA_BUCKET"
-bucket_name = "edgepress-media-preview"
+bucket_name = "farramedia-preview"
 
 [observability]
 [observability.logs]
