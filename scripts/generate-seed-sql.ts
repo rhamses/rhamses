@@ -15,6 +15,7 @@ import {
   META_ONLY_POST_TYPE_SLUGS,
   TAXONOMY_SEED_ROWS,
 } from "../src/db/seed-data.ts";
+import { EDP_TABLES } from "../src/db/table-prefix.ts";
 // JSON imports (chaves de tradução)
 import enTranslations from "../src/i18n/languages/en.json";
 import esTranslations from "../src/i18n/languages/es.json";
@@ -70,14 +71,14 @@ const lines: string[] = [
   "-- Fonte: seed-data + default-post-types + i18n/languages/*.json (mesmos dados que runSeed)",
   "",
   "-- Locales (idiomas/países + en_US, es_ES, pt_BR para i18n)",
-  "INSERT OR IGNORE INTO locales (language, hello_world, locale_code, country, timezone) VALUES",
+  "INSERT OR IGNORE INTO " + EDP_TABLES.locales + " (language, hello_world, locale_code, country, timezone) VALUES",
   ...FULL_LOCALES.map(
     (r, i) =>
       `  ('${escapeSql(r.language)}', '${escapeSql(r.hello_world)}', '${escapeSql(r.locale_code)}', '${escapeSql(r.country)}', '${escapeSql(r.timezone)}')${i < FULL_LOCALES.length - 1 ? "," : ";"}`
   ),
   "",
   "-- Post types padrão (post, page, dashboard, settings, user, attachment, etc.)",
-  "INSERT OR IGNORE INTO post_types (slug, name, meta_schema, created_at, updated_at) VALUES",
+  "INSERT OR IGNORE INTO " + EDP_TABLES.post_types + " (slug, name, meta_schema, created_at, updated_at) VALUES",
   ...DEFAULT_POST_TYPES.map((pt, i) => {
     const metaSchemaJson = escapeSql(JSON.stringify(pt.meta_schema));
     return `  ('${escapeSql(pt.slug)}', '${escapeSql(pt.name)}', '${metaSchemaJson}', ${SEED_TS}, ${SEED_TS})${i < DEFAULT_POST_TYPES.length - 1 ? "," : ";"}`;
@@ -91,12 +92,12 @@ const lines: string[] = [
     const parentId =
       row.parent_slug == null
         ? "NULL"
-        : `(SELECT id FROM taxonomies WHERE slug='${escapeSql(row.parent_slug)}' LIMIT 1)`;
-    return `INSERT OR IGNORE INTO taxonomies (name, slug, type, parent_id, created_at, updated_at) VALUES ('${name}', '${slug}', '${type}', ${parentId}, ${SEED_TS}, ${SEED_TS});`;
+        : `(SELECT id FROM ${EDP_TABLES.taxonomies} WHERE slug='${escapeSql(row.parent_slug)}' LIMIT 1)`;
+    return `INSERT OR IGNORE INTO ${EDP_TABLES.taxonomies} (name, slug, type, parent_id, created_at, updated_at) VALUES ('${name}', '${slug}', '${type}', ${parentId}, ${SEED_TS}, ${SEED_TS});`;
   }),
   "",
   "-- Permissões por perfil (0=admin, 1=editor, 2=autor, 3=leitor)",
-  "INSERT OR IGNORE INTO role_capability (role_id, capability) VALUES",
+  "INSERT OR IGNORE INTO " + EDP_TABLES.role_capability + " (role_id, capability) VALUES",
   ...ROLE_CAPABILITY_ROWS.map(
     (r, i) =>
       `  (${r.roleId}, '${escapeSql(r.capability)}')${i < ROLE_CAPABILITY_ROWS.length - 1 ? "," : ";"}`
@@ -110,7 +111,7 @@ for (const row of translationsSeed) {
   const ns = escapeSql(row.namespace);
   const k = escapeSql(row.key);
   lines.push(
-    `INSERT INTO translations (namespace, key, created_at, updated_at) SELECT '${ns}', '${k}', ${SEED_TS}, ${SEED_TS} WHERE NOT EXISTS (SELECT 1 FROM translations WHERE namespace='${ns}' AND key='${k}');`
+    `INSERT INTO ${EDP_TABLES.translations} (namespace, key, created_at, updated_at) SELECT '${ns}', '${k}', ${SEED_TS}, ${SEED_TS} WHERE NOT EXISTS (SELECT 1 FROM ${EDP_TABLES.translations} WHERE namespace='${ns}' AND key='${k}');`
   );
 }
 lines.push("");
@@ -123,7 +124,7 @@ for (const row of translationsSeed) {
   for (const locale of ["en_US", "es_ES", "pt_BR"] as const) {
     const val = escapeSql(row[locale]);
     lines.push(
-      `INSERT OR REPLACE INTO translations_languages (id_translations, id_locale_code, value) SELECT (SELECT id FROM translations WHERE namespace='${ns}' AND key='${k}' LIMIT 1), (SELECT id FROM locales WHERE locale_code='${locale}' LIMIT 1), '${val}';`
+      `INSERT OR REPLACE INTO ${EDP_TABLES.translations_languages} (id_translations, id_locale_code, value) SELECT (SELECT id FROM ${EDP_TABLES.translations} WHERE namespace='${ns}' AND key='${k}' LIMIT 1), (SELECT id FROM ${EDP_TABLES.locales} WHERE locale_code='${locale}' LIMIT 1), '${val}';`
     );
   }
 }
@@ -146,7 +147,7 @@ for (const config of MENU_CONFIG) {
   const typeSlug = escapeSql(config.typeSlug);
   const title = escapeSql(config.typeSlug);
   lines.push(
-    `INSERT OR IGNORE INTO posts (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM post_types WHERE slug='${typeSlug}' LIMIT 1), '${title}', '${slug}', 'published', '${metaValues}', ${SEED_TS}, ${SEED_TS} WHERE NOT EXISTS (SELECT 1 FROM posts WHERE slug='${slug}');`
+    `INSERT OR IGNORE INTO ${EDP_TABLES.posts} (post_type_id, title, slug, status, meta_values, created_at, updated_at) SELECT (SELECT id FROM ${EDP_TABLES.post_types} WHERE slug='${typeSlug}' LIMIT 1), '${title}', '${slug}', 'published', '${metaValues}', ${SEED_TS}, ${SEED_TS} WHERE NOT EXISTS (SELECT 1 FROM ${EDP_TABLES.posts} WHERE slug='${slug}');`
   );
 }
 lines.push("");

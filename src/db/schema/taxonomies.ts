@@ -1,5 +1,6 @@
 import { index, int, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
+import { indexName, tableName } from "../table-prefix.ts";
 import { postsTaxonomies } from "./posts_taxonomies.ts";
 import { locales } from "./locales.ts";
 
@@ -8,7 +9,7 @@ import { locales } from "./locales.ts";
  * Armazena categorias, tags e outras taxonomias hierárquicas
  */
 export const taxonomies = sqliteTable(
-  "taxonomies",
+  tableName("taxonomies"),
   {
     id: int().primaryKey({ autoIncrement: true }),
     name: text().notNull(),
@@ -21,11 +22,11 @@ export const taxonomies = sqliteTable(
     updated_at: int(),
   },
   (table) => ({
-    typeIdx: index("taxonomies_type_idx").on(table.type),
-    parentIdIdx: index("taxonomies_parent_id_idx").on(table.parent_id),
-    slugIdx: index("taxonomies_slug_idx").on(table.slug),
-    idLocaleCodeIdx: index("taxonomies_id_locale_code_idx").on(table.id_locale_code),
-    typeSlugIdx: uniqueIndex("taxonomies_type_slug_idx").on(table.type, table.slug),
+    typeIdx: index(indexName("taxonomies_type_idx")).on(table.type),
+    parentIdIdx: index(indexName("taxonomies_parent_id_idx")).on(table.parent_id),
+    slugIdx: index(indexName("taxonomies_slug_idx")).on(table.slug),
+    idLocaleCodeIdx: index(indexName("taxonomies_id_locale_code_idx")).on(table.id_locale_code),
+    typeSlugIdx: uniqueIndex(indexName("taxonomies_type_slug_idx")).on(table.type, table.slug),
   })
 );
 

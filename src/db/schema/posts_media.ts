@@ -1,5 +1,6 @@
 import { index, int, primaryKey, sqliteTable } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
+import { indexName, tableName } from "../table-prefix.ts";
 import { posts } from "./post.ts";
 
 /**
@@ -7,7 +8,7 @@ import { posts } from "./post.ts";
  * Relaciona posts com attachments (media são posts do tipo "attachment")
  */
 export const postsMedia = sqliteTable(
-  "posts_media",
+  tableName("posts_media"),
   {
     post_id: int("post_id")
       .notNull()
@@ -18,8 +19,8 @@ export const postsMedia = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.post_id, table.media_id] }),
-    postIdIdx: index("posts_media_post_id_idx").on(table.post_id),
-    mediaIdIdx: index("posts_media_media_id_idx").on(table.media_id),
+    postIdIdx: index(indexName("posts_media_post_id_idx")).on(table.post_id),
+    mediaIdIdx: index(indexName("posts_media_media_id_idx")).on(table.media_id),
   })
 );
 
