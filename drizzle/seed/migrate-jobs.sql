@@ -6,16 +6,16 @@
 
 -- Post type Jobs
 INSERT OR IGNORE INTO edp_post_types (slug, name, meta_schema, created_at, updated_at)
-SELECT 'jobs', 'Jobs', '[{"key":"menu_order","type":"number","default":0},{"key":"parent_id","type":"number"},{"key":"show_in_menu","type":"boolean","default":false},{"key":"menu_options","type":"array","default":["list","new","taxonomies_type_categorias"]},{"key":"icon","type":"string","default":"line-md:briefcase"},{"key":"post_thumbnail","type":"boolean","default":true},{"key":"taxonomy","type":"array","default":["categorias"]},{"key":"post_types","type":"array","default":["custom_fields"]}]', 0, 0
+SELECT 'jobs', 'Jobs', '[{"key":"menu_order","type":"number","default":0},{"key":"parent_id","type":"number"},{"key":"show_in_menu","type":"boolean","default":false},{"key":"menu_options","type":"array","default":["list","new","taxonomies_type_categorias"]},{"key":"icon","type":"string","default":"line-md:briefcase"},{"key":"post_thumbnail","type":"boolean","default":true},{"key":"taxonomy","type":"array","default":["categorias"]},{"key":"edp_post_types","type":"array","default":["custom_fields"]}]', 0, 0
 WHERE NOT EXISTS (SELECT 1 FROM edp_post_types WHERE slug='jobs');
 
 -- Garante post_types custom_fields no schema jobs (idempotente)
-UPDATE edp_post_types SET meta_schema = '[{"key":"menu_order","type":"number","default":0},{"key":"parent_id","type":"number"},{"key":"show_in_menu","type":"boolean","default":false},{"key":"menu_options","type":"array","default":["list","new","taxonomies_type_categorias"]},{"key":"icon","type":"string","default":"line-md:briefcase"},{"key":"post_thumbnail","type":"boolean","default":true},{"key":"taxonomy","type":"array","default":["categorias"]},{"key":"post_types","type":"array","default":["custom_fields"]}]', updated_at = 0
+UPDATE edp_post_types SET meta_schema = '[{"key":"menu_order","type":"number","default":0},{"key":"parent_id","type":"number"},{"key":"show_in_menu","type":"boolean","default":false},{"key":"menu_options","type":"array","default":["list","new","taxonomies_type_categorias"]},{"key":"icon","type":"string","default":"line-md:briefcase"},{"key":"post_thumbnail","type":"boolean","default":true},{"key":"taxonomy","type":"array","default":["categorias"]},{"key":"edp_post_types","type":"array","default":["custom_fields"]}]', updated_at = 0
 WHERE slug='jobs';
 
 -- Menu admin Jobs
 INSERT OR IGNORE INTO edp_posts (post_type_id, title, slug, status, meta_values, created_at, updated_at)
-SELECT (SELECT id FROM edp_post_types WHERE slug='jobs' LIMIT 1), 'jobs', 'menu-jobs', 'published', '{"show_in_menu":true,"menu_options":["list","new","taxonomies_type_categorias"],"menu_order":9,"icon":"line-md:briefcase","post_types":["custom_fields"]}', 0, 0
+SELECT (SELECT id FROM edp_post_types WHERE slug='jobs' LIMIT 1), 'jobs', 'menu-jobs', 'published', '{"show_in_menu":true,"menu_options":["list","new","taxonomies_type_categorias"],"menu_order":9,"icon":"line-md:briefcase","edp_post_types":["custom_fields"]}', 0, 0
 WHERE NOT EXISTS (SELECT 1 FROM edp_posts WHERE slug='menu-jobs');
 
 -- Traduções admin: postType.jobs + menu.option.taxonomies_type_categorias

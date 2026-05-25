@@ -7,15 +7,15 @@
 -- ============================================
 
 -- Deletar posts sem post_type_id (dados órfãos)
-DELETE FROM "posts_taxonomies" WHERE "post_id" IN (
-  SELECT "id" FROM "posts" WHERE "post_type_id" IS NULL
+DELETE FROM "edp_posts_taxonomies" WHERE "post_id" IN (
+  SELECT "id" FROM "edp_posts" WHERE "post_type_id" IS NULL
 );
 
-DELETE FROM "posts_media" WHERE "post_id" IN (
-  SELECT "id" FROM "posts" WHERE "post_type_id" IS NULL
+DELETE FROM "edp_posts_media" WHERE "post_id" IN (
+  SELECT "id" FROM "edp_posts" WHERE "post_type_id" IS NULL
 );
 
-DELETE FROM "posts" WHERE "post_type_id" IS NULL;
+DELETE FROM "edp_posts" WHERE "post_type_id" IS NULL;
 
 -- ============================================
 -- STEP 2: Set default post_type for existing null values (if any remain)
@@ -23,9 +23,9 @@ DELETE FROM "posts" WHERE "post_type_id" IS NULL;
 
 -- Buscar ID do post_type "post" (padrão)
 -- Se não existir nenhum post_type_id null, esta query não faz nada
-UPDATE "posts" 
+UPDATE "edp_posts" 
 SET "post_type_id" = (
-  SELECT "id" FROM "post_types" WHERE "slug" = 'post' LIMIT 1
+  SELECT "id" FROM "edp_post_types" WHERE "slug" = 'post' LIMIT 1
 )
 WHERE "post_type_id" IS NULL;
 
@@ -37,8 +37,8 @@ WHERE "post_type_id" IS NULL;
 -- Criar tabela temporária com nova estrutura
 CREATE TABLE "posts_new" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-  "post_type_id" INTEGER NOT NULL REFERENCES "post_types"("id") ON DELETE RESTRICT,
-  "author_id" TEXT REFERENCES "user"("id") ON DELETE SET NULL,
+  "post_type_id" INTEGER NOT NULL REFERENCES "edp_post_types"("id") ON DELETE RESTRICT,
+  "author_id" TEXT REFERENCES "edp_user"("id") ON DELETE SET NULL,
   "title" TEXT NOT NULL,
   "slug" TEXT NOT NULL UNIQUE,
   "excerpt" TEXT,
@@ -78,19 +78,19 @@ SELECT
   "published_at",
   "created_at",
   "updated_at"
-FROM "posts";
+FROM "edp_posts";
 
 -- Dropar tabela antiga
-DROP TABLE "posts";
+DROP TABLE "edp_posts";
 
 -- Renomear tabela nova
-ALTER TABLE "posts_new" RENAME TO "posts";
+ALTER TABLE "posts_new" RENAME TO "edp_posts";
 
 -- Recriar índices
-CREATE INDEX "posts_post_type_id_idx" ON "posts" ("post_type_id");
-CREATE INDEX "posts_author_id_idx" ON "posts" ("author_id");
-CREATE INDEX "posts_status_idx" ON "posts" ("status");
-CREATE INDEX "posts_created_at_idx" ON "posts" ("created_at");
-CREATE INDEX "posts_updated_at_idx" ON "posts" ("updated_at");
-CREATE INDEX "posts_slug_idx" ON "posts" ("slug");
-CREATE UNIQUE INDEX "posts_slug_unique" ON "posts" ("slug");
+CREATE INDEX "edp_posts_post_type_id_idx" ON "edp_posts" ("post_type_id");
+CREATE INDEX "edp_posts_author_id_idx" ON "edp_posts" ("author_id");
+CREATE INDEX "edp_posts_status_idx" ON "edp_posts" ("status");
+CREATE INDEX "edp_posts_created_at_idx" ON "edp_posts" ("created_at");
+CREATE INDEX "edp_posts_updated_at_idx" ON "edp_posts" ("updated_at");
+CREATE INDEX "edp_posts_slug_idx" ON "edp_posts" ("slug");
+CREATE UNIQUE INDEX "edp_posts_slug_unique" ON "edp_posts" ("slug");
