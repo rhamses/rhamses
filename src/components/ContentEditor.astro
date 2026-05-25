@@ -1,5 +1,5 @@
 ---
-import { BlockNoteEditor } from "./BlockNoteEditor.tsx";
+import BlockNoteEditor from "./BlockNoteEditor.tsx";
 
 interface Props {
   /** Conteúdo inicial em HTML (ex.: body do post). */
@@ -15,7 +15,7 @@ interface Props {
 const { initialBody = "", name = "body", inputId = "body", locale = "en" } = Astro.props;
 ---
 
-<div class="content-editor h-full min-h-0">
+<div class="content-editor relative w-full min-h-[480px]">
   <BlockNoteEditor
     client:only="react"
     initialBody={initialBody}

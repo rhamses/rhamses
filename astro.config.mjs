@@ -16,6 +16,8 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 const patchPagesWrangler = path.join(root, "scripts/patch-pages-wrangler.mjs");
 const shimDebug = path.resolve(root, "src/lib/shim-debug.ts");
 const shimAsyncHooks = path.resolve(root, "src/lib/shim-node-async-hooks.ts");
+const reactRoot = path.resolve(root, "node_modules/react");
+const reactDomRoot = path.resolve(root, "node_modules/react-dom");
 
 export default defineConfig({
   adapter: cloudflare({
@@ -38,9 +40,7 @@ export default defineConfig({
   i18n: {
     locales: ["en", "es", "pt-br"],
     defaultLocale: "pt-br",
-    routing: {
-      prefixDefaultLocale: false,
-    },
+    routing: "manual",
   },
 
   vite: {
@@ -72,6 +72,20 @@ export default defineConfig({
     // invalidar chunks em node_modules/.vite/deps_ssr durante reload ("file does not exist"
     // / "Module is undefined"). Mantém drizzle/auth/libsql fora do dep optimizer.
     optimizeDeps: {
+      entries: ["src/components/BlockNoteEditor.tsx"],
+      include: [
+        "react",
+        "react-dom",
+        "react-dom/client",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
+        "@blocknote/core",
+        "@blocknote/react",
+        "@blocknote/mantine",
+        "@blocknote/xl-multi-column",
+        "@mantine/core",
+        "@mantine/hooks",
+      ],
       exclude: [
         "drizzle-orm",
         "drizzle-orm/d1",
@@ -84,7 +98,13 @@ export default defineConfig({
       ],
     },
     resolve: {
+      dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
       alias: [
+        // Uma única instância de React no client (BlockNote + ilha Astro).
+        { find: "react-dom/client", replacement: path.join(reactDomRoot, "client.js") },
+        { find: "react/jsx-dev-runtime", replacement: path.join(reactRoot, "jsx-dev-runtime.js") },
+        { find: "react/jsx-runtime", replacement: path.join(reactRoot, "jsx-runtime.js") },
+        { find: "react", replacement: path.join(reactRoot, "index.js") },
         // Cloudflare Workers não expõe node:async_hooks; better-auth (e deps) usam e quebram em runtime.
         { find: "node:async_hooks", replacement: shimAsyncHooks },
         { find: "async_hooks", replacement: shimAsyncHooks },
@@ -99,7 +119,18 @@ export default defineConfig({
           : []),
       ],
     },
+    ssr: {
+      optimizeDeps: {
+        include: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
+      },
+    },
   },
 
-  integrations: [alpinejs(), react(), icon()],
+  integrations: [
+    alpinejs(),
+    react({
+      experimentalDisableStreaming: true,
+    }),
+    icon(),
+  ],
 });

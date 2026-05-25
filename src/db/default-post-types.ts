@@ -20,6 +20,7 @@ const postMetaSchema = buildMetaSchema([
 
 const pageMetaSchema = buildMetaSchema([
   { key: "post_thumbnail", type: "boolean", default: true },
+  { key: "post_types", type: "array", default: ["custom_fields"] },
 ]);
 
 const attachmentMetaSchema = buildMetaSchema([

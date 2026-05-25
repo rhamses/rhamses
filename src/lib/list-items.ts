@@ -131,6 +131,16 @@ export async function getListItems(
     if (ids.length > 0) conditions.push(inArray(posts.id, ids));
     else conditions.push(sql`1 = 0`);
   }
+  if (filter.created_at) {
+    conditions.push(
+      sql`CAST(${posts.created_at} AS TEXT) LIKE ${`%${filter.created_at}%`}`,
+    );
+  }
+  if (filter.updated_at) {
+    conditions.push(
+      sql`CAST(${posts.updated_at} AS TEXT) LIKE ${`%${filter.updated_at}%`}`,
+    );
+  }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -282,6 +292,14 @@ export async function getSettingsListItems(
     filterConditions.push(like(settingsTable.name, `%${filter.name}%`));
   if (filter.value)
     filterConditions.push(like(settingsTable.value, `%${filter.value}%`));
+  if (filter.autoload) {
+    const normalized = filter.autoload.trim().toLowerCase();
+    if (["1", "true", "sim", "yes", "y"].includes(normalized)) {
+      filterConditions.push(eq(settingsTable.autoload, true));
+    } else if (["0", "false", "nao", "não", "no", "n"].includes(normalized)) {
+      filterConditions.push(eq(settingsTable.autoload, false));
+    }
+  }
   const whereClause =
     filterConditions.length > 0 ? and(...filterConditions) : undefined;
 

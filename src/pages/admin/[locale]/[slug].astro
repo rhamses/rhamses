@@ -5,11 +5,12 @@
  *   (ex.: admin/post?domain=taxonomies&type=category → templates/taxonomies.astro).
  * - Caso contrário, redireciona: post/page → list; dashboard → admin; settings → settings.
  */
-import { locales, defaultLocale } from "../../../i18n/index.ts";
+import { locales, defaultLocale, t } from "../../../i18n/index.ts";
 import { db } from "../../../db/index.ts";
 import { getMenuItems } from "../../../lib/menu.ts";
 import { ensureTranslationsLoaded } from "../../../lib/i18n-helpers.ts";
 import type { MenuItem } from "../../../lib/menu.ts";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
 
 const locale = Astro.params["locale"] ?? defaultLocale;
 const slug = Astro.params["slug"];
@@ -67,19 +68,31 @@ if (TemplateComponent) {
   }
   return Astro.redirect(`/admin/${locale}`);
 }
+
+const pageTitle =
+  domain === "taxonomies" && type
+    ? t(locale, "taxonomy.type." + type)
+    : slug ?? "Admin";
 ---
 
 {
   TemplateComponent && domain && (
-    <TemplateComponent
+    <AdminLayout
+      title={pageTitle}
       locale={locale}
-      slug={slug}
-      domain={domain}
-      type={type}
       menuItems={menuItems}
-      params={params}
       user={user}
-    />
+    >
+      <TemplateComponent
+        locale={locale}
+        slug={slug}
+        domain={domain}
+        type={type}
+        menuItems={menuItems}
+        params={params}
+        user={user}
+      />
+    </AdminLayout>
   )
 }
 
