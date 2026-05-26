@@ -27,7 +27,7 @@
   "main": "index.ts",
   "scripts": {
     "predev": "node scripts/sync-theme-public.mjs",
-    "prebuild": "node scripts/sync-theme-public.mjs",
+    "prebuild": "node scripts/sync-theme-public.mjs && tsx scripts/collect-sitemap-urls.ts",
     "dev": "npx astro dev",
     "dev:astrov5": "wrangler types -c wrangler.toml && npm run build && npx wrangler dev --port 8787",
     "dev:astro": "wrangler types -c wrangler.toml && astro dev",
@@ -74,8 +74,10 @@
     "vitest": "^4.0.16"
   },
   "dependencies": {
+    "@astro-community/astro-embed-vimeo": "^0.3.12",
     "@astrojs/alpinejs": "^0.5.0",
     "@astrojs/cloudflare": "^13.1.2",
+    "@astrojs/sitemap": "^3.7.2",
     "@blocknote/core": "^0.46.2",
     "@blocknote/mantine": "^0.46.2",
     "@blocknote/react": "^0.46.2",
@@ -96,7 +98,6 @@
     "@uppy/xhr-upload": "^5.1.1",
     "alpinejs": "^3.15.8",
     "astro": "^6.0.6",
-    "@astro-community/astro-embed-vimeo": "^0.3.12",
     "astro-icon": "^1.1.5",
     "better-auth": "^1.4.9",
     "daisyui": "^5.5.17",

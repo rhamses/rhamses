@@ -10,10 +10,17 @@ import { getPostMedia } from "./services/media-service.ts";
 import { getPostTypeId } from "./services/post-service.ts";
 import { parseMetaValues } from "./utils/meta-parser.ts";
 import { buildBodySmart, type MediaForSmartBody } from "./content-post-detail.ts";
+import {
+  getSeoMetadataForPost,
+  buildSeoApiPayload,
+  type SeoApiPayload,
+} from "./services/seo-metadata-service.ts";
+import { buildPostJsonLd } from "./services/json-ld-service.ts";
 
 export type PostRow = {
   id: number;
   post_type_id: number;
+  parent_id: number | null;
   author_id: string | null;
   title: string;
   slug: string;
@@ -119,9 +126,14 @@ export async function getPostCustomFields(
 }
 
 /** Monta o payload completo do post com hierarquia: post (pai) + meta_schema, meta_values, custom_fields, body_smart, media, taxonomies. */
+export type BuildContentPostPayloadOptions = {
+  baseUrl?: string;
+};
+
 export async function buildContentPostPayload(
   db: Database,
-  post: PostRow
+  post: PostRow,
+  options?: BuildContentPostPayloadOptions,
 ): Promise<{
   id: number;
   post_type_id: number;
@@ -140,14 +152,25 @@ export async function buildContentPostPayload(
   meta_values: Record<string, unknown>;
   custom_fields: CustomFieldItem[];
   taxonomies: PostTaxonomyItem[];
+  post_type_slug: string;
+  seo: SeoApiPayload | null;
+  json_ld: Record<string, unknown>[];
 }> {
-  const [meta_schema, custom_fields, media, taxonomiesList] = await Promise.all([
-    getPostMetaSchema(db, post.post_type_id),
-    getPostCustomFields(db, post.id),
-    getPostMedia(db as never, post.id),
-    getPostTaxonomiesForPayload(db, post.id),
-  ]);
+  const [meta_schema, custom_fields, media, taxonomiesList, seoRow, postTypeRow] =
+    await Promise.all([
+      getPostMetaSchema(db, post.post_type_id),
+      getPostCustomFields(db, post.id),
+      getPostMedia(db as never, post.id),
+      getPostTaxonomiesForPayload(db, post.id),
+      getSeoMetadataForPost(db, post.id),
+      db
+        .select({ slug: postTypes.slug })
+        .from(postTypes)
+        .where(eq(postTypes.id, post.post_type_id))
+        .limit(1),
+    ]);
 
+  const post_type_slug = postTypeRow[0]?.slug ?? "";
   const meta_values = parseMetaValues(post.meta_values) as Record<string, unknown>;
   const body_smart = buildBodySmart(post.body, media as MediaForSmartBody[]);
   const mediaWithParsedMeta = (media as { meta_values?: string | null }[]).map((m) => ({
@@ -155,9 +178,35 @@ export async function buildContentPostPayload(
     meta_values: parseMetaValues(m.meta_values ?? null),
   }));
 
+  const seo = buildSeoApiPayload(seoRow, options?.baseUrl, post.slug);
+
+  const json_ld = await buildPostJsonLd(
+    db,
+    {
+      id: post.id,
+      title: post.title,
+      slug: post.slug,
+      excerpt: post.excerpt,
+      body: post.body,
+      author_id: post.author_id,
+      parent_id: post.parent_id,
+      published_at: post.published_at,
+      created_at: post.created_at,
+      updated_at: post.updated_at,
+      meta_values,
+    },
+    {
+      post_type_slug,
+      seo,
+      baseUrl: options?.baseUrl,
+      media: mediaWithParsedMeta as Record<string, unknown>[],
+    },
+  );
+
   return {
     id: post.id,
     post_type_id: post.post_type_id,
+    parent_id: post.parent_id,
     author_id: post.author_id,
     title: post.title,
     slug: post.slug,
@@ -173,5 +222,8 @@ export async function buildContentPostPayload(
     meta_values,
     custom_fields,
     taxonomies: taxonomiesList,
+    post_type_slug,
+    seo,
+    json_ld,
   };
 }

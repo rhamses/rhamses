@@ -57,6 +57,7 @@ export async function syncPostCache(
       .select({
         id: posts.id,
         post_type_id: posts.post_type_id,
+        parent_id: posts.parent_id,
         author_id: posts.author_id,
         title: posts.title,
         slug: posts.slug,

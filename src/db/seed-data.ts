@@ -131,6 +131,24 @@ export const MENU_CONFIG: MenuConfigRow[] = [
 export { DEFAULT_POST_TYPES, META_ONLY_POST_TYPE_SLUGS } from "./default-post-types.ts";
 export type { DefaultPostTypeRow } from "./default-post-types.ts";
 
+/** Post types com custom fields habilitados e bloco SEO automático no admin. */
+export const POST_TYPES_WITH_CUSTOM_FIELDS = ["post", "page"] as const;
+
+/** Template global de custom field SEO (post tipo custom_fields, sem parent). */
+export const SEO_CUSTOM_FIELD_TEMPLATE = {
+  title: "SEO",
+  slug: "template-seo",
+  meta_values: {
+    template: true,
+    field_type: ["text", "text", "text"],
+    fields: [
+      { name: "Título SEO", value: "", type: "text" },
+      { name: "Descrição SEO", value: "", type: "text" },
+      { name: "URL Canônica", value: "", type: "text" },
+    ],
+  },
+} as const;
+
 /** Linha para tabela settings. */
 export interface SettingsRow {
   name: string;
@@ -141,6 +159,7 @@ export interface SettingsRow {
 /** Settings iniciais (setup_done=N até concluir /setup). */
 export const DEFAULT_SETTINGS_ROWS: SettingsRow[] = [
   { name: "site_name", value: "demo site", autoload: true },
+  { name: "site_url", value: "", autoload: true },
   { name: "site_description", value: "demo_description", autoload: true },
   { name: "setup_done", value: "N", autoload: true },
   { name: "default_posttype", value: "post", autoload: true },

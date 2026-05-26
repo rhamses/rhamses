@@ -75,6 +75,7 @@ import {
   validateThemeCanonicalMeta,
 } from "../../lib/services/theme-service.ts";
 import { triggerThemeImportFromRuntime } from "../../lib/services/theme-import-trigger.ts";
+import { syncSeoMetadataFromPostSave } from "../../lib/services/seo-metadata-service.ts";
 
 // Auth
 import { requireMinRole, resolveAuthorIdForRole } from "../../lib/api-auth.ts";
@@ -565,6 +566,14 @@ export async function POST({
           }
         }
       }
+    }
+
+    if (postId && post_type !== "custom_fields") {
+      await syncSeoMetadataFromPostSave(db, postId, {
+        title,
+        excerpt: excerpt || "",
+        slug,
+      }, customFieldsDataRaw);
     }
 
     // Atualizar cache KV com o post atual (create ou update)

@@ -101,7 +101,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     pathname.startsWith("/.well-known/") ||
     pathname === "/.well-known" ||
     pathname.startsWith("/@") ||
-    pathname.startsWith("/_");
+    pathname.startsWith("/_") ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap-index.xml" ||
+    pathname.startsWith("/sitemap");
 
   if (!skipActiveThemeRewrite) {
     const locals = context.locals as App.Locals;

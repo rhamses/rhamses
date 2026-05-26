@@ -259,6 +259,7 @@ export async function getPostPayloadBySlug(
   kv: ReturnType<typeof getContentApiRuntime>["kv"],
   slug: string,
   rawStatus: string | null,
+  baseUrl?: string,
 ): Promise<ContentPostPayload> {
   if (!isValidSlug(slug)) {
     throw new ContentBadRequestError("Slug inválido");
@@ -282,6 +283,7 @@ export async function getPostPayloadBySlug(
     .select({
       id: posts.id,
       post_type_id: posts.post_type_id,
+      parent_id: posts.parent_id,
       author_id: posts.author_id,
       title: posts.title,
       slug: posts.slug,
@@ -306,7 +308,7 @@ export async function getPostPayloadBySlug(
     throw new ContentNotFoundError("Post not found", { slug });
   }
 
-  const payload = await buildContentPostPayload(db, post);
+  const payload = await buildContentPostPayload(db, post, { baseUrl });
 
   if (kv) {
     try {
@@ -324,6 +326,7 @@ export async function getPostOrRowPayload(
   safeTable: string,
   idOrSlug: string,
   rawStatus: string | null,
+  baseUrl?: string,
 ): Promise<ContentPostPayload | ContentRowResponse> {
   const isNumericId = /^\d+$/.test(idOrSlug);
   const idNum = isNumericId ? parseInt(idOrSlug, 10) : null;
@@ -359,6 +362,7 @@ export async function getPostOrRowPayload(
       .select({
         id: posts.id,
         post_type_id: posts.post_type_id,
+        parent_id: posts.parent_id,
         author_id: posts.author_id,
         title: posts.title,
         slug: posts.slug,
@@ -378,7 +382,7 @@ export async function getPostOrRowPayload(
       throw new ContentNotFoundError("Post not found", bySlug ? { slug: idOrSlug } : { id: idNum });
     }
 
-    const payload = await buildContentPostPayload(db, post);
+    const payload = await buildContentPostPayload(db, post, { baseUrl });
 
     if (kv) {
       try {
@@ -603,7 +607,7 @@ export async function getTableContentListFromUrl(
 
 export async function getPostBySlugFromUrl(locals: App.Locals, slug: string, url: URL): Promise<ContentPostPayload> {
   const { kv } = getContentApiRuntime(locals);
-  return getPostPayloadBySlug(kv, slug, url.searchParams.get("status"));
+  return getPostPayloadBySlug(kv, slug, url.searchParams.get("status"), url.origin);
 }
 
 export async function getPostOrRowFromUrl(
@@ -613,5 +617,5 @@ export async function getPostOrRowFromUrl(
   url: URL,
 ): Promise<ContentPostPayload | ContentRowResponse> {
   const { kv } = getContentApiRuntime(locals);
-  return getPostOrRowPayload(kv, safeTable, idOrSlug, url.searchParams.get("status"));
+  return getPostOrRowPayload(kv, safeTable, idOrSlug, url.searchParams.get("status"), url.origin);
 }

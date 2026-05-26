@@ -13,6 +13,12 @@ import { requireMinRole } from "../../../../lib/api-auth.ts";
 
 // Services
 import { getPostTypeId } from "../../../../lib/services/post-service.ts";
+import {
+  customFieldPostsToItems,
+  extractSeoFromCustomFields,
+  resolveSeoValues,
+  upsertSeoMetadata,
+} from "../../../../lib/services/seo-metadata-service.ts";
 
 export const prerender = false;
 
@@ -216,6 +222,19 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
         await db.insert(posts).values(customFieldsToInsert);
       }
     }
+
+    const seoItems = customFieldPostsToItems(
+      customFieldsPosts.map((cf) => ({
+        title: cf.title,
+        meta_values: cf.meta_values,
+      })),
+    );
+    const seoResolved = resolveSeoValues(extractSeoFromCustomFields(seoItems), {
+      title: newTitle,
+      excerpt: originalPost.excerpt ?? "",
+      slug: newSlug,
+    });
+    await upsertSeoMetadata(db, newPostId, seoResolved);
 
     if (request.headers.get("HX-Request") === "true") {
       return htmxRefreshResponse();

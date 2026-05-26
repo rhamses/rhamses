@@ -284,7 +284,7 @@ const showAlternateTemplate =
         {hasCustomFields && (
           <div id="custom-fields-wrapper-root" class="mt-4">
             <CustomFieldsWrapper
-              initialData={action === "edit" ? initialCustomFields : []}
+              initialData={initialCustomFields}
               templateCustomFields={templateCustomFieldsList}
             />
           </div>

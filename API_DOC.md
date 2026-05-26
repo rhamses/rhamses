@@ -122,9 +122,17 @@ GET /api/content/posts?locale_id=1&page=2&order=created_at&orderDir=desc
 
 - **Auth:** não obrigatória.
 - **Query:** `status` (opcional) — valores permitidos: `published`, `draft`, `archived`. Padrão: só `published`.
-- **Resposta:** `200` — objeto **hierárquico**: o pai é o post/post_type; dentro dele: **meta_schema** (JSON estruturado do tipo do post), **meta_values** (JSON estruturado), **custom_fields** (JSON estruturado — campos personalizados filhos), **body_smart**, **media**, **taxonomies** (array de termos associados ao post: `id`, `name`, `slug`, `type`, `description`, `parent_id`). Campos do post: `id`, `post_type_id`, `title`, `slug`, `excerpt`, `body`, `status`, `published_at`, `created_at`, `updated_at`, etc.
+- **Resposta:** `200` — objeto **hierárquico**: o pai é o post/post_type; dentro dele: **meta_schema** (JSON estruturado do tipo do post), **meta_values** (JSON estruturado), **custom_fields** (JSON estruturado — campos personalizados filhos), **seo** (metadados para `<title>`, `<meta name="description">` e `<link rel="canonical">`), **json_ld** (array de objetos schema.org para `<script type="application/ld+json">`), **body_smart**, **media**, **taxonomies** (array de termos associados ao post: `id`, `name`, `slug`, `type`, `description`, `parent_id`). Campos do post: `id`, `post_type_id`, `parent_id`, `post_type_slug`, `title`, `slug`, `excerpt`, `body`, `status`, `published_at`, `created_at`, `updated_at`, etc.
+- **seo:** `{ title, description, canonical_slug, canonical }` — valores finais (com fallbacks de `title`/`excerpt`/`slug` do post quando os campos SEO estão vazios no save). `canonical` é URL absoluta quando a requisição informa origem; `canonical_slug` é o valor bruto armazenado (slug ou URL customizada).
+- **json_ld:** array de grafos JSON-LD prontos para serializar em scripts separados no `<head>`. Para `post_type_slug = post`: `BreadcrumbList` + `Article`. Para `page`: `BreadcrumbList` + `WebPage`. Requer `site_url` configurado; caso contrário retorna `[]`.
 - **Erros:** `400` (slug inválido), `404` (post não encontrado).
 - **Cache:** não autenticado → KV primeiro; autenticado → DB direto.
+
+### `GET /api/content/site`
+
+- **Auth:** não obrigatória.
+- **Resposta:** `200` — `{ site_name, site_description, site_url, json_ld }` onde `json_ld` contém um objeto `WebSite` (schema.org) para a home.
+- **Uso no tema:** injetar cada item de `json_ld` com `<script type="application/ld+json">` (ver componente `JsonLdScript.astro`).
 
 ### `GET /api/content/[table]/[id_or_slug]`
 

@@ -18,6 +18,8 @@ import {
   getMetaSchemaHasCustomFields,
 } from "../utils/meta-parser.ts";
 import { t } from "../../i18n/index.ts";
+import { POST_TYPES_WITH_CUSTOM_FIELDS } from "../../db/seed-data.ts";
+import { buildDefaultSeoCustomFieldBlock } from "./seo-metadata-service.ts";
 
 export type TypeRow = { id: number; name: string; meta_schema: unknown };
 
@@ -371,6 +373,14 @@ export async function getContentPageData(params: {
         };
       });
     }
+  }
+
+  if (
+    action === "new" &&
+    (POST_TYPES_WITH_CUSTOM_FIELDS as readonly string[]).includes(postTypeSlug) &&
+    initialCustomFields.length === 0
+  ) {
+    initialCustomFields = [buildDefaultSeoCustomFieldBlock()];
   }
 
   if (hasCustomFields && customFieldsTypeId) {
