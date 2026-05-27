@@ -7,10 +7,11 @@ import AdminLayout from "../layouts/AdminLayout.astro";
 import AdminFormContainer from "../components/admin/AdminFormContainer.astro";
 import AdminFormActions from "../components/admin/AdminFormActions.astro";
 import DataList from "../components/DataList.astro";
+import IconPickerDropdown from "../components/IconPickerDropdown.astro";
 import { t, type Locale } from "../../i18n/index.ts";
 import type { MenuItem } from "../../utils/menu.ts";
 import type { MetaSchemaItem } from "../../db/schema/meta_schema.ts";
-import { LINE_MD_ICONS, DEFAULT_ICON, isValidLineMdIcon } from "../../utils/line-md-icons.ts";
+import { DEFAULT_ICON, isValidLineMdIcon } from "../../utils/line-md-icons.ts";
 
 export interface PostTypeRow {
   id: number;
@@ -43,16 +44,6 @@ export interface Props {
   postTypesNotInMenu?: { id: number; slug: string; name: string }[];
 }
 
-function defaultToDisplay(value: unknown): string {
-  if (value === undefined || value === null) return "";
-  if (typeof value === "boolean") return value ? "true" : "false";
-  if (typeof value === "number") return String(value);
-  if (Array.isArray(value)) return JSON.stringify(value);
-  return String(value);
-}
-
-const FIXED_META_KEYS = new Set(["show_in_menu", "menu_order", "menu_options", "icon", "post_thumbnail", "post_types", "taxonomy"]);
-
 function parseMetaSchema(meta: unknown): MetaSchemaItem[] {
   if (Array.isArray(meta)) return meta as MetaSchemaItem[];
   if (typeof meta === "string") {
@@ -68,22 +59,6 @@ function parseMetaSchema(meta: unknown): MetaSchemaItem[] {
 
 function getMetaByKey(items: MetaSchemaItem[], key: string): MetaSchemaItem | undefined {
   return items.find((i) => i.key === key);
-}
-
-function parseMetaSchemaForForm(meta: unknown, values?: Record<string, unknown> | null): { key: string; type: string; defaultDisplay: string }[] {
-  const arr = parseMetaSchema(meta);
-  const v = values ?? {};
-  return arr
-    .filter((item) => !FIXED_META_KEYS.has(item.key ?? ""))
-    .map((item) => {
-      const key = item.key ?? "";
-      const fromValues = key ? v[key] : undefined;
-      return {
-        key,
-        type: item.type ?? "string",
-        defaultDisplay: defaultToDisplay(fromValues !== undefined ? fromValues : item.default),
-      };
-    });
 }
 
 function getFixedMetaInitial(meta: unknown, values?: Record<string, unknown> | null) {
@@ -109,12 +84,9 @@ const isEdit = editRecord != null;
 
 const initialSlug = editRecord?.slug ?? "";
 const initialName = editRecord?.name ?? "";
-const initialMetaSchemaItems = parseMetaSchemaForForm(editRecord?.meta_schema ?? null, menuPostMetaValues);
 const fixedInitial = getFixedMetaInitial(editRecord?.meta_schema ?? null, menuPostMetaValues);
 const defaultTranslations = { pt_BR: "", es_ES: "", en_US: "" };
 const initialTranslations = postTypeTranslations ?? defaultTranslations;
-
-const META_TYPES = ["string", "number", "boolean", "array"];
 
 const formAction = isEdit ? `/api/post-types/${editRecord!.id}` : "/api/post-types";
 const listUrl = `/admin/${locale}/settings?page=post_types`;
@@ -197,7 +169,7 @@ const deleteConfirmMessage =
           </div>
           <div class="form-control">
             <label class="label">
-              <span class="label-text">{t(currentLocale, "admin.postTypes.languages") ?? "Languages"}</span>
+              <span class="label-text">{t(currentLocale, "admin.postTypes.languages")}</span>
             </label>
             <div class="space-y-2 rounded-lg border border-base-300 p-3 bg-base-200/30">
               <div class="form-control">
@@ -270,11 +242,12 @@ const deleteConfirmMessage =
                   <label for="fixed-icon" class="label py-0">
                     <span class="label-text text-sm">{t(currentLocale, "admin.postTypes.icon")}</span>
                   </label>
-                  <select id="fixed-icon" class="select select-bordered select-sm w-full font-mono" data-fixed-icon value={fixedInitial.icon}>
-                    {LINE_MD_ICONS.map((iconName) => (
-                      <option value={iconName}>{iconName}</option>
-                    ))}
-                  </select>
+                  <IconPickerDropdown
+                    selectedIcon={fixedInitial.icon}
+                    searchPlaceholder={t(currentLocale, "admin.postTypes.iconSearch")}
+                    emptyMessage={t(currentLocale, "admin.postTypes.iconSearchEmpty")}
+                    listHint={t(currentLocale, "admin.postTypes.iconSearchHint")}
+                  />
                 </div>
               </div>
 
@@ -332,39 +305,6 @@ const deleteConfirmMessage =
                 </div>
               )}
             </div>
-
-            <p class="text-sm text-base-content/70 mt-2">{t(currentLocale, "admin.postTypes.extraFields")}</p>
-            <div id="meta-schema-fields" class="space-y-3 border border-base-300 rounded-lg p-3 bg-base-200/50 mt-1">
-              {initialMetaSchemaItems.map((item, idx) => (
-                <div class="meta-schema-row flex flex-wrap items-center gap-2" data-index={idx}>
-                  <input
-                    type="text"
-                    class="input input-bordered input-sm flex-1 min-w-24"
-                    placeholder={t(currentLocale, "admin.postTypes.fieldKey")}
-                    value={item.key}
-                    data-ms-key
-                  />
-                  <select class="select select-bordered select-sm w-28" data-ms-type>
-                    {META_TYPES.map((type) => (
-                      <option value={type} selected={type === item.type}>{type}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    class="input input-bordered input-sm flex-1 min-w-24 font-mono text-sm"
-                    placeholder={t(currentLocale, "admin.postTypes.fieldDefault")}
-                    value={item.defaultDisplay}
-                    data-ms-default
-                  />
-                  <button type="button" class="btn btn-ghost btn-sm btn-square text-error ms-remove-row" aria-label={t(currentLocale, "admin.postTypes.removeField")}>
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button type="button" id="meta-schema-add-row" class="btn btn-ghost btn-sm mt-2">
-              {t(currentLocale, "admin.postTypes.addField")}
-            </button>
           </div>
           <AdminFormActions
             submitLabel={isEdit ? t(currentLocale, "admin.content.saveEdit") : t(currentLocale, "admin.content.saveNew")}
@@ -413,8 +353,6 @@ const deleteConfirmMessage =
   })();
 
   (function () {
-    const META_TYPES = ["string", "number", "boolean", "array"];
-
     const showInMenuCheck = document.getElementById("fixed-show-in-menu") as HTMLInputElement | null;
     const showInMenuExtra = document.getElementById("show-in-menu-extra");
     function toggleShowInMenuExtra() {
@@ -443,7 +381,7 @@ const deleteConfirmMessage =
         const menuOptions = menuOptionsStr.split(",").map((s) => s.trim()).filter(Boolean);
         arr.push({ key: "menu_options", type: "array", default: menuOptions });
 
-        const iconEl = document.querySelector("[data-fixed-icon]") as HTMLSelectElement | null;
+        const iconEl = document.querySelector("[data-fixed-icon]") as HTMLInputElement | null;
         const icon = iconEl?.value?.trim() ?? "line-md:document";
         arr.push({ key: "icon", type: "string", default: icon });
       }
@@ -463,31 +401,6 @@ const deleteConfirmMessage =
         .filter(Boolean) as string[];
       arr.push({ key: "taxonomy", type: "array", default: taxonomyTypes });
 
-      const rows = document.querySelectorAll("#meta-schema-fields .meta-schema-row");
-      rows.forEach((row) => {
-        const keyInput = row.querySelector("[data-ms-key]") as HTMLInputElement;
-        const typeSelect = row.querySelector("[data-ms-type]") as unknown as HTMLSelectElement | null;
-        if (!typeSelect) return;
-        const defaultInput = row.querySelector("[data-ms-default]") as HTMLInputElement;
-        const key = keyInput?.value?.trim();
-        const type = typeSelect?.value ?? "string";
-        if (!key) return;
-        let defaultVal: unknown = undefined;
-        const defaultStr = defaultInput?.value?.trim();
-        if (defaultStr !== "" && defaultStr !== undefined) {
-          if (type === "number") defaultVal = Number(defaultStr);
-          else if (type === "boolean") defaultVal = defaultStr === "true";
-          else if (type === "array") {
-            try {
-              defaultVal = JSON.parse(defaultStr);
-            } catch {
-              defaultVal = defaultStr.includes(",") ? defaultStr.split(",").map((s) => s.trim()) : [];
-            }
-          } else defaultVal = defaultStr;
-        }
-        arr.push({ key, type, ...(defaultVal !== undefined && { default: defaultVal }) });
-      });
-
       const schemaHidden = document.getElementById("meta_schema_value") as HTMLInputElement;
       if (schemaHidden) schemaHidden.value = JSON.stringify(arr);
 
@@ -497,7 +410,7 @@ const deleteConfirmMessage =
         metaValues["menu_order"] = (document.querySelector("[data-fixed-menu-order]") as HTMLInputElement)?.value ? Number((document.querySelector("[data-fixed-menu-order]") as HTMLInputElement).value) || 0 : 0;
         const menuOptEl = document.querySelector("[data-fixed-menu-options]") as HTMLInputElement | null;
         metaValues["menu_options"] = menuOptEl?.value?.trim() ? menuOptEl.value.split(",").map((s) => s.trim()).filter(Boolean) : ["new", "list"];
-        metaValues["icon"] = (document.querySelector("[data-fixed-icon]") as HTMLSelectElement | null)?.value?.trim() || "line-md:document";
+        metaValues["icon"] = (document.querySelector("[data-fixed-icon]") as HTMLInputElement | null)?.value?.trim() || "line-md:document";
       }
       metaValues["post_thumbnail"] = postThumbnail;
       const postTypesCheckedForValues = document.querySelectorAll(".fixed-post-types-cb:checked");
@@ -508,58 +421,12 @@ const deleteConfirmMessage =
       metaValues["taxonomy"] = Array.from(taxonomyCheckedForValues)
         .map((el) => (el as HTMLElement).dataset["fixedTaxonomyType"])
         .filter(Boolean);
-      rows.forEach((row) => {
-        const keyInput = row.querySelector("[data-ms-key]") as HTMLInputElement;
-        const typeSelect = row.querySelector("[data-ms-type]") as unknown as HTMLSelectElement | null;
-        if (!typeSelect) return;
-        const defaultInput = row.querySelector("[data-ms-default]") as HTMLInputElement;
-        const key = keyInput?.value?.trim();
-        const type = typeSelect?.value ?? "string";
-        if (!key) return;
-        let val: unknown = undefined;
-        const defaultStr = defaultInput?.value?.trim();
-        if (defaultStr !== "" && defaultStr !== undefined) {
-          if (type === "number") val = Number(defaultStr);
-          else if (type === "boolean") val = defaultStr === "true";
-          else if (type === "array") {
-            try { val = JSON.parse(defaultStr); } catch { val = defaultStr.includes(",") ? defaultStr.split(",").map((s) => s.trim()) : []; }
-          } else val = defaultStr;
-        }
-        if (val !== undefined) metaValues[key] = val;
-      });
       const valuesHidden = document.getElementById("meta_values_value") as HTMLInputElement;
       if (valuesHidden) valuesHidden.value = JSON.stringify(metaValues);
     }
 
-    function addRow() {
-      const container = document.getElementById("meta-schema-fields");
-      if (!container) return;
-      const row = document.createElement("div");
-      row.className = "meta-schema-row flex flex-wrap items-center gap-2";
-      const keyPlaceholder = container.closest("form")?.querySelector("[data-ms-key]")?.getAttribute("placeholder") ?? "Chave";
-      const defaultPlaceholder = container.closest("form")?.querySelector("[data-ms-default]")?.getAttribute("placeholder") ?? "Valor padrão";
-      row.innerHTML = `
-        <input type="text" class="input input-bordered input-sm flex-1 min-w-24" placeholder="${keyPlaceholder}" data-ms-key />
-        <select class="select select-bordered select-sm w-28" data-ms-type">
-          ${META_TYPES.map((t) => `<option value="${t}">${t}</option>`).join("")}
-        </select>
-        <input type="text" class="input input-bordered input-sm flex-1 min-w-24 font-mono text-sm" placeholder="${defaultPlaceholder}" data-ms-default />
-        <button type="button" class="btn btn-ghost btn-sm btn-square text-error ms-remove-row" aria-label="Remover">×</button>
-      `;
-      row.querySelector(".ms-remove-row")?.addEventListener("click", () => row.remove());
-      container.appendChild(row);
-    }
-
-    const form = document.querySelector("#meta-schema-fields")?.closest("form");
-    if (form) {
-      form.addEventListener("submit", buildMetaSchemaFromFields);
-    }
-
-    document.getElementById("meta-schema-add-row")?.addEventListener("click", addRow);
-
-    document.querySelectorAll(".ms-remove-row").forEach((btn) => {
-      btn.addEventListener("click", () => btn.closest(".meta-schema-row")?.remove());
-    });
+    const form = document.getElementById("meta_schema_value")?.closest("form");
+    form?.addEventListener("submit", buildMetaSchemaFromFields);
 
     document.body.addEventListener("htmx:afterRequest", (ev: Event) => {
       const evt = ev as CustomEvent & { detail?: { successful?: boolean; target?: HTMLElement; trigger?: HTMLElement; xhr?: { status?: number; responseText?: string; responseURL?: string } } };

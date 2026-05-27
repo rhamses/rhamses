@@ -20,4 +20,13 @@ export function normalizeLineMdIcon(value: unknown): string {
   return isValidLineMdIcon(value) ? value : DEFAULT_ICON;
 }
 
+/** URL SVG no CDN Iconify para uso em `<img>` (dropdowns dinâmicos). */
+export function lineMdIconSvgUrl(iconId: string): string {
+  const idx = iconId.indexOf(":");
+  if (idx === -1) return "";
+  const prefix = iconId.slice(0, idx);
+  const name = iconId.slice(idx + 1);
+  return `https://api.iconify.design/${prefix}/${encodeURIComponent(name)}.svg`;
+}
+
 export { LINE_MD_ICONS, DEFAULT_ICON };
