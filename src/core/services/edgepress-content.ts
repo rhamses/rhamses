@@ -13,6 +13,7 @@ import {
   getContentApiRuntime,
   getSafeTableName,
   getTableNames,
+  prefixedTable,
   escapeIdentifier,
   VALID_TABLE_IDENTIFIER,
 } from "../../utils/db-utils.ts";
@@ -399,7 +400,9 @@ export async function getPostOrRowPayload(
     throw new ContentBadRequestError("For this table only numeric id is supported");
   }
 
-  const quotedTable = `"${escapeIdentifier(safeTable)}"`;
+  // safeTable é o nome lógico (ex: "settings"). No banco físico, as tabelas têm prefixo (ex: "edp_settings").
+  const physicalTable = prefixedTable(safeTable);
+  const quotedTable = `"${escapeIdentifier(physicalTable)}"`;
   const rows = await db.all(sql.raw(`SELECT * FROM ${quotedTable} WHERE "id" = ${idNum} LIMIT 1`)) as Record<
     string,
     unknown

@@ -10,7 +10,7 @@ type ThemeFieldMap = Record<string, string>;
 export const THEME_ACTIVE_KV_KEY = "theme:active";
 export const THEME_META_KV_PREFIX = "theme:meta:";
 export const THEME_STATUS_KV_PREFIX = "theme:status:";
-const THEME_PATH_PREFIX = "src/themes/";
+const THEME_PATH_PREFIX = "src/pages/themes/";
 
 export const THEME_REQUIRED_KEYS = ["theme_slug", "theme_path"] as const;
 
@@ -116,7 +116,7 @@ export function isValidThemePath(path: string): boolean {
   if (!trimmed.startsWith(THEME_PATH_PREFIX)) return false;
   if (trimmed.includes("..")) return false;
   if (trimmed.includes("\\")) return false;
-  return /^src\/themes\/[a-z0-9/_-]+$/.test(trimmed);
+  return /^src\/pages\/themes\/[a-z0-9/_-]+$/.test(trimmed);
 }
 
 export function normalizeSupports(input: unknown): string[] {
@@ -276,7 +276,7 @@ export function validateThemeCanonicalMeta(
   if (!meta.theme_path) errors.push("theme_path is required");
   if (meta.theme_slug && !isValidSlug(meta.theme_slug)) errors.push("theme_slug must be a valid slug");
   if (meta.theme_path && !isValidThemePath(meta.theme_path)) {
-    errors.push("theme_path must start with src/themes/ and use safe characters");
+    errors.push("theme_path must start with src/pages/themes/ and use safe characters");
   }
   if (requireGithubRepoUrl && !meta.github_repo_url) {
     errors.push("github_repo_url is required when requesting activation");
@@ -369,7 +369,7 @@ function fallbackTheme(): ThemeActiveConfig {
     is_active: true,
     meta: {
       theme_slug: "default",
-      theme_path: "src/themes/default",
+      theme_path: "src/pages/themes/default",
       supports: [],
       github_ref: "main",
     },

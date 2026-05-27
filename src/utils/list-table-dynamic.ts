@@ -194,12 +194,13 @@ export async function getTableList(
   // Construir JOINs (com alias para self-join para evitar ambiguidade)
   const joins: string[] = [];
   for (const related of relatedWithAliases) {
-    const isSelfJoin = related.table === logicalTable;
     const quotedRelatedTable = `"${escapeIdentifier(related.tablePhysical)}"`;
-    const joinTarget = isSelfJoin ? `${quotedRelatedTable} AS "${escapeIdentifier(related.alias)}"` : quotedRelatedTable;
     const quotedFkCol = `"${escapeIdentifier(related.fkColumn)}"`;
     const quotedRefCol = `"${escapeIdentifier(related.refColumn)}"`;
-    const rightSide = isSelfJoin ? `"${escapeIdentifier(related.alias)}".${quotedRefCol}` : `${quotedRelatedTable}.${quotedRefCol}`;
+    // Sempre aplicar alias, pois SELECT/WHERE/ORDER usam `related.alias` (ex: "post_types"."slug").
+    // Sem alias, o SQL gerado referencia uma tabela inexistente (ex: join em "edp_post_types" mas where em "post_types".)
+    const joinTarget = `${quotedRelatedTable} AS "${escapeIdentifier(related.alias)}"`;
+    const rightSide = `"${escapeIdentifier(related.alias)}".${quotedRefCol}`;
     joins.push(`LEFT JOIN ${joinTarget} ON ${quotedTable}.${quotedFkCol} = ${rightSide}`);
   }
   const joinSql = joins.length > 0 ? ` ${joins.join(" ")}` : "";
@@ -275,6 +276,9 @@ export async function getTableList(
   let quotedOrderCol: string;
   if (isSafeMetaKey) {
     quotedOrderCol = `json_extract(${quotedTable}."meta_values", '$.${metaOrderKey.replace(/"/g, '""')}')`;
+  } else if (logicalTable === "posts" && orderCol === "published_at") {
+    // Mais recente/antigo por data efetiva (publicação ou criação).
+    quotedOrderCol = `COALESCE(${quotedTable}."published_at", ${quotedTable}."created_at")`;
   } else if (columns.includes(orderCol)) {
     quotedOrderCol = `${quotedTable}."${escapeIdentifier(orderCol)}"`;
   } else {

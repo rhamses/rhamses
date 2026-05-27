@@ -1,0 +1,22 @@
+---
+import BaseHead from "../../../components/themes/baseHead.astro";
+import BaseNav from "../../../components/themes/baseNav.astro";
+import BaseProp from "../../../components/themes/baseProp.astro";
+import BaseLogo from "../../../components/themes/baseLogo.astro";
+import PostList from "../../../components/themes/postList.astro";
+---
+<!doctype html>
+<html lang="pt-BR">
+  <BaseHead pageSlug="hello-world" />
+  <body>
+    <header>
+      <BaseLogo width={200} height={200} />
+      <BaseNav postType="menus" locale="pt-br" />
+      <div>
+        <BaseProp table="settings" id="10" />
+        <BaseProp table="settings" id="9" />
+      </div>
+    </header>
+    <PostList locale="pt-br" postType="post" order="desc" />
+  </body>
+</html>

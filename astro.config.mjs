@@ -156,6 +156,17 @@ export default defineConfig({
     ssr: {
       optimizeDeps: {
         include: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
+        // Mesmo exclude do optimizeDeps raiz: evita deps_ssr corrompidos com drizzle no workerd.
+        exclude: [
+          "drizzle-orm",
+          "drizzle-orm/d1",
+          "drizzle-orm/sqlite-core",
+          "drizzle-orm/libsql",
+          "better-auth",
+          "better-auth/adapters/drizzle",
+          "@libsql/client",
+          "@noble/hashes",
+        ],
       },
     },
   },

@@ -411,7 +411,7 @@ export async function runSeed(db: any): Promise<void> {
     }
   }
 
-  // Tema padrão (template default 2026): garante que exista um post "themes" com slug 2026 e ativo.
+  // Tema padrão showcase (slug 2026): post "themes" ativo para o site público.
   const themesTypeId = typeIds["themes"];
   if (themesTypeId) {
     const [existingTheme2026] = await db
@@ -423,7 +423,7 @@ export async function runSeed(db: any): Promise<void> {
     if (!existingTheme2026) {
       await db.insert(posts).values({
         post_type_id: themesTypeId,
-        title: "Tema 2026",
+        title: "Edgepress Showcase 2026",
         slug: "2026",
         status: "published",
         meta_values: JSON.stringify({

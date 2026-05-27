@@ -17,6 +17,7 @@ import { getKvFromLocals } from "./utils/runtime-locals.ts";
 // Endpoints sensíveis que requerem validação extra de CSRF
 const sensitiveAPIPaths = ["/api/posts", "/api/upload", "/api/media"];
 const setupPath = `/setup/${defaultLocale}`;
+const FALLBACK_THEME_SLUG = "2026";
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const pathname = new URL(context.request.url).pathname;
@@ -72,20 +73,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  // URLs públicas não devem expor /themes/* (rota interna).
-  // Quando acessado publicamente, reescrevemos internamente a mesma URL
-  // adicionando `x-edgepress-internal-rewrite: 1` para evitar loops.
-  if (!isApi && pathname.startsWith("/themes/")) {
-    if (context.request.headers.get("x-edgepress-internal-rewrite") === "1") {
-      return next();
-    }
-
-    const url = new URL(context.request.url);
-    const headers = new Headers(context.request.headers);
-    headers.set("x-edgepress-internal-rewrite", "1");
-    return context.rewrite(new Request(url, { headers }));
-  }
-
   // Site público: tudo que não é admin, login, setup ou API reescreve internamente
   // para /themes/{active_theme}/... usando o setting `active_theme` no banco.
   // Ex.: /quem-somos → /themes/farramedia/quem-somos (mantém a URL no browser).
@@ -109,23 +96,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (!skipActiveThemeRewrite) {
     const locals = context.locals as App.Locals;
     const kv = getKvFromLocals(locals);
-    const activeSlug = await getActiveThemeSlugFromSettings(db, {
+    const activeSlugFromDb = await getActiveThemeSlugFromSettings(db, {
       kv,
       isAuthenticated: Boolean(locals.user),
     });
 
-    if (activeSlug) {
-      const url = new URL(context.request.url);
-      let outPath = pathname;
-      if (outPath.length > 1 && outPath.endsWith("/")) {
-        outPath = outPath.replace(/\/+$/, "");
-      }
-      url.pathname =
-        outPath === "/" ? `/themes/${activeSlug}` : `/themes/${activeSlug}${outPath}`;
-      const headers = new Headers(context.request.headers);
-      headers.set("x-edgepress-internal-rewrite", "1");
-      return context.rewrite(new Request(url, { headers }));
+    const activeSlug = (activeSlugFromDb ?? "").trim() || FALLBACK_THEME_SLUG;
+    let outPath = pathname;
+    if (outPath.length > 1 && outPath.endsWith("/")) {
+      outPath = outPath.replace(/\/+$/, "");
     }
+    const targetPath =
+      outPath === "/" ? `/themes/${activeSlug}` : `/themes/${activeSlug}${outPath}`;
+    // next(path) em vez de context.rewrite(Request): evita SpanParent / I/O cross-request no workerd dev.
+    return next(`${targetPath}${context.url.search}`);
   }
 
   // Validação CSRF para endpoints sensíveis (POST/PUT/DELETE/PATCH)
