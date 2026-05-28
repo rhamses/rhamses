@@ -163,6 +163,7 @@
   "admin.postTypes.translationValue": "Translation",
   "admin.postTypes.translationValuePlaceholder": "Text shown in this language",
   "admin.postTypes.translationValueHint": "Each row saves the translated value for the selected language (translations list).",
+  "admin.postTypes.noTranslationLocales": "No languages configured. Set site_locales in settings or run the seed.",
   "admin.postTypes.translationsSection": "Translations",
   "admin.postTypes.addTranslation": "Add translation",
   "admin.postTypes.slugRequiredForCategory": "Enter the post type slug before adding a category."

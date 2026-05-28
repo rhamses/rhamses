@@ -163,6 +163,7 @@
   "admin.postTypes.translationValue": "Traducción",
   "admin.postTypes.translationValuePlaceholder": "Texto mostrado en este idioma",
   "admin.postTypes.translationValueHint": "Cada fila guarda el valor traducido para el idioma seleccionado (listado de traducciones).",
+  "admin.postTypes.noTranslationLocales": "Ningún idioma configurado. Defina site_locales en ajustes o ejecute el seed.",
   "admin.postTypes.translationsSection": "Traducciones",
   "admin.postTypes.addTranslation": "Añadir traducción",
   "admin.postTypes.slugRequiredForCategory": "Indique el slug del tipo de entrada antes de añadir una categoría."

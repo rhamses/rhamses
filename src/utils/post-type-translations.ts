@@ -8,8 +8,10 @@ import { translations, translationsLanguages, locales } from "../db/schema.ts";
 
 type Db = BaseSQLiteDatabase<"sync" | "async", unknown, Record<string, never>>;
 
+import { ADMIN_DB_LOCALE_CODES } from "./admin-locale-constants.ts";
+
 const POST_TYPE_NAMESPACE = "postType";
-const LOCALE_CODES = ["pt_BR", "es_ES", "en_US"] as const;
+const LOCALE_CODES = ADMIN_DB_LOCALE_CODES;
 
 export interface PostTypeTranslationValues {
   pt_BR: string;

@@ -1,16 +1,13 @@
 ---
 /**
  * Modal para criar tipo de taxonomia customizado (registry taxonomyType).
- * Deve ficar fora do formulário principal de post types (sem form aninhado).
- *
- * - Campo superior: título/chave (`translations.key`, slug automático para o tipo).
- * - Linhas de tradução: valor por locale (`translations_languages.value`).
+ * Traduções: idiomas fixos do admin (pt_BR, es_ES, en_US) + site_locales (settings).
  */
-import { Icon } from "astro-icon/components";
-import { eq } from "drizzle-orm";
 import { db } from "../../db/index.ts";
-import { locales as localesTable } from "../../db/schema.ts";
-import LocaleDropdown from "../../components/LocaleDropdown.astro";
+import {
+  localeCodeFlag,
+  resolveCategoryTranslationLocales,
+} from "../../utils/admin-locales.ts";
 import { t, type Locale } from "../../i18n/index.ts";
 
 interface Props {
@@ -20,19 +17,7 @@ interface Props {
 const { locale } = Astro.props;
 const currentLocale = locale as Locale;
 
-const adminLocaleCode =
-  locale === "pt-br" ? "pt_BR" : locale === "es" ? "es_ES" : "en_US";
-let defaultLocaleId: number | null = null;
-try {
-  const [row] = await db
-    .select({ id: localesTable.id })
-    .from(localesTable)
-    .where(eq(localesTable.locale_code, adminLocaleCode))
-    .limit(1);
-  defaultLocaleId = row?.id ?? null;
-} catch {
-  defaultLocaleId = null;
-}
+const translationLocales = await resolveCategoryTranslationLocales(db);
 ---
 
 <input type="checkbox" id="post-type-taxonomy-modal-toggle" class="modal-toggle" />
@@ -71,53 +56,53 @@ try {
         <p class="label-text font-medium mb-2">
           {t(currentLocale, "admin.postTypes.translationsSection")}
         </p>
-        <div id="taxonomy-type-translation-rows" class="flex flex-col gap-2">
-          <div class="taxonomy-type-translation-row grid grid-cols-[minmax(0,11rem)_1fr_2rem] gap-2 items-end">
-            <div class="form-control min-w-0">
-              <span class="label-text text-xs mb-1 block">
-                {t(currentLocale, "admin.postTypes.translationLocale")}
-              </span>
-              <LocaleDropdown
-                fieldName="translation_locale_id[]"
-                selectedLocaleId={defaultLocaleId}
-                cols={1}
-                compact={true}
-                required={true}
-              />
-            </div>
-            <div class="form-control min-w-0">
-              <label class="label py-0">
-                <span class="label-text text-xs">
-                  {t(currentLocale, "admin.postTypes.translationValue")}
-                </span>
-              </label>
-              <input
-                type="text"
-                name="translation_value[]"
-                class="input input-bordered input-sm w-full"
-                placeholder={t(currentLocale, "admin.postTypes.translationValuePlaceholder")}
-              />
-            </div>
-            <button
-              type="button"
-              class="btn btn-ghost btn-xs btn-square text-error taxonomy-row-remove shrink-0 self-end mb-1"
-              aria-label={t(currentLocale, "admin.postTypes.removeField")}
-              disabled
-            >
-              <Icon name="line-md:trash" size={18} aria-hidden="true" />
-            </button>
+        {translationLocales.length === 0 ? (
+          <p class="text-sm text-warning">
+            {t(currentLocale, "admin.postTypes.noTranslationLocales")}
+          </p>
+        ) : (
+          <div id="taxonomy-type-translation-rows" class="flex flex-col gap-2">
+            {translationLocales.map((loc) => (
+              <div
+                class="taxonomy-type-translation-row grid grid-cols-[minmax(0,11rem)_1fr] gap-2 items-end"
+                data-locale-id={loc.id}
+              >
+                <div class="form-control min-w-0">
+                  <span class="label-text text-xs mb-1 block">
+                    {t(currentLocale, "admin.postTypes.translationLocale")}
+                  </span>
+                  <input type="hidden" name="translation_locale_id[]" value={loc.id} />
+                  <div
+                    class="input input-bordered input-sm w-full flex items-center gap-2 bg-base-200/40 cursor-default"
+                    aria-readonly="true"
+                  >
+                    <span aria-hidden="true">{localeCodeFlag(loc.locale_code)}</span>
+                    <span class="truncate text-sm">{loc.language}</span>
+                  </div>
+                  <span class="text-[10px] text-base-content/50 mt-0.5 block">
+                    {loc.locale_code}
+                  </span>
+                </div>
+                <div class="form-control min-w-0">
+                  <label class="label py-0">
+                    <span class="label-text text-xs">
+                      {t(currentLocale, "admin.postTypes.translationValue")}
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name="translation_value[]"
+                    class="input input-bordered input-sm w-full"
+                    placeholder={t(currentLocale, "admin.postTypes.translationValuePlaceholder")}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
         <p class="text-xs text-base-content/50 mt-2">
           {t(currentLocale, "admin.postTypes.translationValueHint")}
         </p>
-        <button
-          type="button"
-          id="taxonomy-type-add-translation-row"
-          class="link link-primary link-hover text-sm mt-2"
-        >
-          {t(currentLocale, "admin.postTypes.addTranslation")}
-        </button>
       </div>
 
       <div class="modal-action mt-2">
@@ -133,37 +118,6 @@ try {
   <label class="modal-backdrop" for="post-type-taxonomy-modal-toggle">
     {t(currentLocale, "admin.taxonomy.modalClose")}
   </label>
-</div>
-
-<div id="taxonomy-type-row-template" class="hidden" aria-hidden="true">
-  <div class="taxonomy-type-translation-row grid grid-cols-[minmax(0,11rem)_1fr_2rem] gap-2 items-end">
-    <div class="form-control min-w-0">
-      <span class="label-text text-xs mb-1 block">
-        {t(currentLocale, "admin.postTypes.translationLocale")}
-      </span>
-      <LocaleDropdown fieldName="translation_locale_id[]" cols={1} compact={true} required={true} />
-    </div>
-    <div class="form-control min-w-0">
-      <label class="label py-0">
-        <span class="label-text text-xs">
-          {t(currentLocale, "admin.postTypes.translationValue")}
-        </span>
-      </label>
-      <input
-        type="text"
-        name="translation_value[]"
-        class="input input-bordered input-sm w-full"
-        placeholder={t(currentLocale, "admin.postTypes.translationValuePlaceholder")}
-      />
-    </div>
-    <button
-      type="button"
-      class="btn btn-ghost btn-xs btn-square text-error taxonomy-row-remove shrink-0 self-end mb-1"
-      aria-label={t(currentLocale, "admin.postTypes.removeField")}
-    >
-      <Icon name="line-md:trash" size={18} aria-hidden="true" />
-    </button>
-  </div>
 </div>
 
 <script>
@@ -186,49 +140,11 @@ try {
     form?.reset();
     const err = document.getElementById("post-type-taxonomy-modal-error");
     if (err) err.innerHTML = "";
-    const container = document.getElementById("taxonomy-type-translation-rows");
-    const templateWrap = document.getElementById("taxonomy-type-row-template");
-    const templateRow = templateWrap?.querySelector(".taxonomy-type-translation-row");
-    if (container && templateRow) {
-      container.innerHTML = "";
-      const row = templateRow.cloneNode(true) as HTMLElement;
-      clearTranslationRow(row);
-      container.appendChild(row);
-      const removeBtn = row.querySelector(".taxonomy-row-remove") as HTMLButtonElement | null;
-      if (removeBtn) removeBtn.disabled = true;
-      initAlpineOn(row);
-    }
-  }
-
-  function clearTranslationRow(row: HTMLElement) {
-    row.querySelectorAll('input[type="text"]').forEach((input) => {
-      (input as HTMLInputElement).value = "";
-    });
-    const dropdown = row.querySelector(".locale-dropdown-field") as HTMLElement | null;
-    if (dropdown) {
-      dropdown.dataset["initialLocaleId"] = "";
-      const hidden = dropdown.querySelector('input[type="hidden"]') as HTMLInputElement | null;
-      if (hidden) hidden.value = "";
-    }
-  }
-
-  function initAlpineOn(root: HTMLElement) {
-    const alpine = (window as unknown as { Alpine?: { initTree: (el: HTMLElement) => void } }).Alpine;
-    if (alpine?.initTree) alpine.initTree(root);
-  }
-
-  function bindRemoveButtons(container: HTMLElement) {
-    const rows = container.querySelectorAll(".taxonomy-type-translation-row");
-    rows.forEach((row) => {
-      const btn = row.querySelector(".taxonomy-row-remove") as HTMLButtonElement | null;
-      if (!btn) return;
-      btn.disabled = rows.length <= 1;
-      btn.onclick = () => {
-        if (container.querySelectorAll(".taxonomy-type-translation-row").length <= 1) return;
-        row.remove();
-        bindRemoveButtons(container);
-      };
-    });
+    document
+      .querySelectorAll<HTMLInputElement>('#taxonomy-type-translation-rows input[name="translation_value[]"]')
+      .forEach((input) => {
+        input.value = "";
+      });
   }
 
   function handleTaxonomyTypeAdded(detail: { type?: string; label?: string }) {
@@ -246,21 +162,6 @@ try {
       return null;
     }
   }
-
-  document.getElementById("taxonomy-type-add-translation-row")?.addEventListener("click", () => {
-    const container = document.getElementById("taxonomy-type-translation-rows");
-    const templateWrap = document.getElementById("taxonomy-type-row-template");
-    const templateRow = templateWrap?.querySelector(".taxonomy-type-translation-row");
-    if (!container || !templateRow) return;
-    const row = templateRow.cloneNode(true) as HTMLElement;
-    clearTranslationRow(row);
-    container.appendChild(row);
-    initAlpineOn(row);
-    bindRemoveButtons(container);
-  });
-
-  const rowsContainer = document.getElementById("taxonomy-type-translation-rows");
-  if (rowsContainer) bindRemoveButtons(rowsContainer);
 
   document.body.addEventListener("taxonomy-type-added", (ev: Event) => {
     handleTaxonomyTypeAdded((ev as CustomEvent<{ type?: string; label?: string }>).detail ?? {});
@@ -307,14 +208,3 @@ try {
     }
   });
 </script>
-
-<style>
-  #post-type-taxonomy-form .dropdown {
-    position: relative;
-    z-index: 30;
-  }
-  #post-type-taxonomy-form .dropdown:focus-within,
-  #post-type-taxonomy-form .dropdown.dropdown-open {
-    z-index: 200;
-  }
-</style>

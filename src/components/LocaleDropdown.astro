@@ -13,6 +13,11 @@ export interface Props {
   cols?: number;
   /** input-sm no trigger (modais e formulários compactos) */
   compact?: boolean;
+  /**
+   * Quando definido, restringe a lista a estes IDs (ignora leitura isolada de site_locales).
+   * Use com `resolveCategoryTranslationLocaleIds` para site + admin.
+   */
+  allowedLocaleIds?: number[];
 }
 
 const {
@@ -21,6 +26,7 @@ const {
   required = false,
   cols = 3,
   compact = false,
+  allowedLocaleIds: allowedLocaleIdsProp,
 } = Astro.props;
 
 const gridColsClass =
@@ -45,23 +51,27 @@ const allLocales = await db
   .from(localesTable)
   .orderBy(localesTable.language);
 
-let allowedLocaleIds: number[] | null = null;
-try {
-  const [row] = await db
-    .select({ value: settings.value })
-    .from(settings)
-    .where(eq(settings.name, "site_locales"))
-    .limit(1);
-  const raw = String(row?.value ?? "").trim();
-  if (raw) {
-    const parsed = raw
-      .split(",")
-      .map((s) => parseInt(s.trim(), 10))
-      .filter((n) => !Number.isNaN(n) && n > 0);
-    if (parsed.length > 0) allowedLocaleIds = parsed;
+let allowedLocaleIds: number[] | null =
+  allowedLocaleIdsProp !== undefined ? allowedLocaleIdsProp : null;
+
+if (allowedLocaleIds === null) {
+  try {
+    const [row] = await db
+      .select({ value: settings.value })
+      .from(settings)
+      .where(eq(settings.name, "site_locales"))
+      .limit(1);
+    const raw = String(row?.value ?? "").trim();
+    if (raw) {
+      const parsed = raw
+        .split(",")
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => !Number.isNaN(n) && n > 0);
+      if (parsed.length > 0) allowedLocaleIds = parsed;
+    }
+  } catch {
+    // ignore
   }
-} catch {
-  // ignore
 }
 
 const allowedSet = allowedLocaleIds ? new Set(allowedLocaleIds) : null;

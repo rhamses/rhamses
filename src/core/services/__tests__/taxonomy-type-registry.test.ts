@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   buildPostTypeTaxonomyArray,
   filterTaxonomyTypesForUi,
+  TAXONOMY_TYPE_I18N_NAMESPACE,
+  taxonomyTypeMenuOptionKey,
   withTaxonomyInMetaSchema,
 } from "../taxonomy-type-registry.ts";
 import {
@@ -42,6 +44,8 @@ describe("filterTaxonomyTypesForUi", () => {
 describe("taxonomyTypeToMenuOption", () => {
   it("builds taxonomies_type_* menu option", () => {
     expect(taxonomyTypeToMenuOption("category")).toBe("taxonomies_type_category");
+    expect(taxonomyTypeMenuOptionKey("category")).toBe("taxonomies_type_category");
+    expect(TAXONOMY_TYPE_I18N_NAMESPACE).toBe("taxonomy.type");
     expect(isTaxonomyMenuOption("taxonomies_type_tag")).toBe(true);
     expect(isTaxonomyMenuOption("new")).toBe(false);
   });

@@ -1,14 +1,40 @@
 /**
  * Registry global de tipos de taxonomia (built-in + custom via translations namespace taxonomyType).
  */
-import { and, eq, isNull, or } from "drizzle-orm";
-import { translations, translationsLanguages, taxonomies } from "../../db/schema.ts";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
+import { translations, taxonomies, locales } from "../../db/schema.ts";
 import type { Database } from "../../shared/types/database.ts";
 import type { MetaSchemaItem } from "../../db/schema/meta_schema.ts";
+import { ADMIN_DB_LOCALE_CODES } from "../../utils/admin-locale-constants.ts";
 import { slugify } from "../../utils/slugify.ts";
+import { upsertNamespaceTranslationRows } from "../../utils/translation-upsert.ts";
 import { getTaxonomyTypeRootId } from "./taxonomy-service.ts";
 
 export const TAXONOMY_TYPE_NAMESPACE = "taxonomyType";
+/** Namespace i18n usado por t('taxonomy.type.{slug}') no admin e menu. */
+export const TAXONOMY_TYPE_I18N_NAMESPACE = "taxonomy.type";
+export const MENU_OPTION_NAMESPACE = "menu.option";
+
+/** Chave em menu.option para label do item de menu (ex.: taxonomies_type_genero). */
+export function taxonomyTypeMenuOptionKey(typeSlug: string): string {
+  return `taxonomies_type_${typeSlug}`;
+}
+
+/** Grava traduções nos namespaces taxonomyType, taxonomy.type e menu.option. */
+export async function upsertTaxonomyTypeTranslationNamespaces(
+  db: Database,
+  typeSlug: string,
+  rows: TaxonomyTranslationInput[]
+): Promise<void> {
+  await upsertNamespaceTranslationRows(db, TAXONOMY_TYPE_NAMESPACE, typeSlug, rows);
+  await upsertNamespaceTranslationRows(db, TAXONOMY_TYPE_I18N_NAMESPACE, typeSlug, rows);
+  await upsertNamespaceTranslationRows(
+    db,
+    MENU_OPTION_NAMESPACE,
+    taxonomyTypeMenuOptionKey(typeSlug),
+    rows
+  );
+}
 export const BUILTIN_TAXONOMY_TYPES = ["category", "tag"] as const;
 export type BuiltinTaxonomyType = (typeof BUILTIN_TAXONOMY_TYPES)[number];
 
@@ -117,6 +143,30 @@ export async function listTaxonomyTypes(
   return items;
 }
 
+/**
+ * Garante pt_BR, es_ES e en_US com valor (tradução do formulário ou nome da categoria).
+ */
+export async function mergeTaxonomyTranslationsWithAdminFallback(
+  db: Database,
+  categoryName: string,
+  translations: TaxonomyTranslationInput[]
+): Promise<TaxonomyTranslationInput[]> {
+  const adminRows = await db
+    .select({ id: locales.id })
+    .from(locales)
+    .where(inArray(locales.locale_code, [...ADMIN_DB_LOCALE_CODES]));
+
+  const merged = new Map<number, string>();
+  for (const row of translations) {
+    const value = (row.value ?? "").trim();
+    if (row.locale_id && value) merged.set(row.locale_id, value);
+  }
+  for (const admin of adminRows) {
+    if (!merged.has(admin.id)) merged.set(admin.id, categoryName);
+  }
+  return [...merged.entries()].map(([locale_id, value]) => ({ locale_id, value }));
+}
+
 async function taxonomyTypeExists(db: Database, slug: string): Promise<boolean> {
   const [tr] = await db
     .select({ id: translations.id })
@@ -155,32 +205,13 @@ export async function createTaxonomyType(
     throw new Error("SLUG_EXISTS");
   }
 
-  const now = Date.now();
-  const [inserted] = await db
-    .insert(translations)
-    .values({
-      namespace: TAXONOMY_TYPE_NAMESPACE,
-      key: slug,
-      created_at: now,
-      updated_at: now,
-    })
-    .returning({ id: translations.id });
+  const mergedTranslations = await mergeTaxonomyTranslationsWithAdminFallback(
+    db,
+    name,
+    params.translations
+  );
 
-  if (!inserted) throw new Error("INSERT_FAILED");
-  const translationId = inserted.id;
-
-  const seenLocales = new Set<number>();
-  for (const row of params.translations) {
-    const localeId = row.locale_id;
-    const value = (row.value ?? "").trim();
-    if (!localeId || !value || seenLocales.has(localeId)) continue;
-    seenLocales.add(localeId);
-    await db.insert(translationsLanguages).values({
-      id_translations: translationId,
-      id_locale_code: localeId,
-      value,
-    });
-  }
+  await upsertTaxonomyTypeTranslationNamespaces(db, slug, mergedTranslations);
 
   await getTaxonomyTypeRootId(db, slug, { displayName: name });
 
