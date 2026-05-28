@@ -6,7 +6,7 @@
  */
 import AdminTwoColumns from "../components/admin/AdminTwoColumns.astro";
 import DataList from "../components/DataList.astro";
-import LanguageDropdown from "../components/LanguageDropdown.astro";
+import LocaleDropdown from "../../components/LocaleDropdown.astro";
 import { db } from "../../db/index.ts";
 import { settings, taxonomies, locales as localesTable } from "../../db/schema.ts";
 import { and, eq } from "drizzle-orm";
@@ -296,7 +296,7 @@ const emptyColspan = columns.length + 1;
               >{t(currentLocale, "admin.content.language")}</span
             >
           </label>
-          <LanguageDropdown selectedLocaleId={initialLocaleId} cols={1} />
+          <LocaleDropdown selectedLocaleId={initialLocaleId} cols={1} />
         </div>
         <div data-taxonomy-form-error class="min-h-6"></div>
         <button type="submit" class="btn btn-primary btn-sm">

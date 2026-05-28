@@ -128,6 +128,7 @@ export const TABLE_DELETE_TEMPLATE: Record<string, string> = {
   user: "/api/users/{id}",
   settings: "/api/settings/{id}",
   posts: "/api/posts/{id}",
+  translations_languages: "/api/translations/{id}",
 };
 
 /**

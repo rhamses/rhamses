@@ -51,7 +51,7 @@
   "postType.user": "User",
   "postType.attachment": "Media",
   "postType.translations": "Translations",
-  "postType.translations_languages": "Translations Languages",
+  "postType.translations_languages": "Translations",
   "postType.themes": "Themes",
   "postType.post_type": "Post Type",
   "admin.content.newTitle": "New {type}",

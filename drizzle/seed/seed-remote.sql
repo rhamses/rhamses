@@ -87,6 +87,7 @@ INSERT OR IGNORE INTO edp_settings (name, value, autoload) VALUES
   ('setup_done', 'N', 1),
   ('default_posttype', 'post', 1),
   ('default_taxonomies', 'category,tag', 1),
+  ('site_locales', '', 1),
   ('active_theme', '2026', 1),
   ('datalist_pagination', '10', 1);
 
