@@ -149,5 +149,21 @@
   "admin.postTypes.postTypesLabel": "Tipos de entrada (custom fields, etc.)",
   "admin.postTypes.taxonomyLabel": "Taxonomías",
   "admin.postTypes.deleteConfirm": "Si elimina el tipo de entrada, todas las entradas asociadas serán eliminadas.",
-  "admin.postTypes.confirmYes": "Sí"
+  "admin.postTypes.confirmYes": "Sí",
+  "admin.postTypes.panel.languages": "Idiomas",
+  "admin.postTypes.panel.languagesInfo": "Introduzca aquí la etiqueta del campo en los idiomas del admin.",
+  "admin.postTypes.panel.views": "Visualizaciones",
+  "admin.postTypes.panel.viewsInfo": "Elija qué debe aparecer o no en este tipo de entrada.",
+  "admin.postTypes.panel.categorization": "Categorización",
+  "admin.postTypes.panel.categorizationInfo": "Seleccione las taxonomías disponibles para este tipo de entrada.",
+  "admin.postTypes.addCategory": "Añadir categoría",
+  "admin.postTypes.categoryName": "Nombre de la categoría",
+  "admin.postTypes.categoryKeyHint": "Título de la clave en traducciones (ej.: genero). El identificador técnico se genera automáticamente.",
+  "admin.postTypes.translationLocale": "Idioma",
+  "admin.postTypes.translationValue": "Traducción",
+  "admin.postTypes.translationValuePlaceholder": "Texto mostrado en este idioma",
+  "admin.postTypes.translationValueHint": "Cada fila guarda el valor traducido para el idioma seleccionado (listado de traducciones).",
+  "admin.postTypes.translationsSection": "Traducciones",
+  "admin.postTypes.addTranslation": "Añadir traducción",
+  "admin.postTypes.slugRequiredForCategory": "Indique el slug del tipo de entrada antes de añadir una categoría."
 }

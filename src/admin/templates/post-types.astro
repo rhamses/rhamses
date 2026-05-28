@@ -8,10 +8,16 @@ import AdminFormContainer from "../components/admin/AdminFormContainer.astro";
 import AdminFormActions from "../components/admin/AdminFormActions.astro";
 import DataList from "../components/DataList.astro";
 import IconPickerDropdown from "../components/IconPickerDropdown.astro";
+import Collapse from "../components/Collapse.astro";
+import PostTypeTaxonomyModal from "../components/PostTypeTaxonomyModal.astro";
 import { t, type Locale } from "../../i18n/index.ts";
 import type { MenuItem } from "../../utils/menu.ts";
 import type { MetaSchemaItem } from "../../db/schema/meta_schema.ts";
 import { DEFAULT_ICON, isValidLineMdIcon } from "../../utils/line-md-icons.ts";
+import {
+  filterTaxonomyTypesForUi,
+  type TaxonomyTypeListItem,
+} from "../../core/services/taxonomy-type-registry.ts";
 
 export interface PostTypeRow {
   id: number;
@@ -43,6 +49,7 @@ export interface Props {
   postTypeTranslations?: PostTypeTranslations | null;
   /** Post types que não têm show_in_menu = true (para checkbox "post_types" no meta schema) */
   postTypesNotInMenu?: { id: number; slug: string; name: string }[];
+  taxonomyTypesList?: TaxonomyTypeListItem[];
 }
 
 function parseMetaSchema(meta: unknown): MetaSchemaItem[] {
@@ -79,7 +86,17 @@ function getFixedMetaInitial(meta: unknown, values?: Record<string, unknown> | n
   return { showInMenu, menuOrder, menuOptionsDisplay, icon, postThumbnail, postTypesSelected, taxonomySelected };
 }
 
-const { locale, menuItems, currentUser, items, editRecord, menuPostMetaValues, postTypeTranslations, postTypesNotInMenu = [] } = Astro.props;
+const {
+  locale,
+  menuItems,
+  currentUser,
+  items,
+  editRecord,
+  menuPostMetaValues,
+  postTypeTranslations,
+  postTypesNotInMenu = [],
+  taxonomyTypesList = [],
+} = Astro.props;
 const currentLocale = locale as Locale;
 const isEdit = editRecord != null;
 const pageLength = Astro.props.pageLength ?? 10;
@@ -87,6 +104,16 @@ const pageLength = Astro.props.pageLength ?? 10;
 const initialSlug = editRecord?.slug ?? "";
 const initialName = editRecord?.name ?? "";
 const fixedInitial = getFixedMetaInitial(editRecord?.meta_schema ?? null, menuPostMetaValues);
+const taxonomySelectedUi = filterTaxonomyTypesForUi(fixedInitial.taxonomySelected);
+
+function taxonomyTypeLabel(item: TaxonomyTypeListItem): string {
+  if (item.isBuiltin) {
+    const key = `taxonomy.type.${item.type}`;
+    const translated = t(currentLocale, key);
+    return translated !== key ? translated : item.type;
+  }
+  return item.label;
+}
 const defaultTranslations = { pt_BR: "", es_ES: "", en_US: "" };
 const initialTranslations = postTypeTranslations ?? defaultTranslations;
 
@@ -127,6 +154,7 @@ const deleteConfirmMessage =
         </h3>
         <div id="post-types-form-error" class="min-h-6"></div>
         <form
+          id="post-types-form"
           method="post"
           action={formAction}
           class="flex flex-col gap-4"
@@ -169,129 +197,138 @@ const deleteConfirmMessage =
               </p>
             )}
           </div>
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">{t(currentLocale, "admin.postTypes.languages")}</span>
-            </label>
-            <div class="space-y-2 rounded-lg border border-base-300 p-3 bg-base-200/30">
-              <div class="form-control">
-                <label for="translation-pt_BR" class="label py-0">
-                  <span class="label-text text-sm">PT_BR</span>
-                </label>
-                <input
-                  type="text"
-                  id="translation-pt_BR"
-                  name="translation_pt_BR"
-                  class="input input-bordered input-sm w-full"
-                  value={initialTranslations.pt_BR}
-                  placeholder={initialName}
-                />
-              </div>
-              <div class="form-control">
-                <label for="translation-es_ES" class="label py-0">
-                  <span class="label-text text-sm">ES</span>
-                </label>
-                <input
-                  type="text"
-                  id="translation-es_ES"
-                  name="translation_es_ES"
-                  class="input input-bordered input-sm w-full"
-                  value={initialTranslations.es_ES}
-                  placeholder={initialName}
-                />
-              </div>
-              <div class="form-control">
-                <label for="translation-en_US" class="label py-0">
-                  <span class="label-text text-sm">EN_US</span>
-                </label>
-                <input
-                  type="text"
-                  id="translation-en_US"
-                  name="translation_en_US"
-                  class="input input-bordered input-sm w-full"
-                  value={initialTranslations.en_US}
-                  placeholder={initialName}
-                />
-              </div>
-            </div>
-          </div>
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">{t(currentLocale, "admin.postTypes.metaSchemaTitle") || "Meta schema"}</span>
-            </label>
-            <input type="hidden" name="meta_schema" id="meta_schema_value" value="[]" />
-            <input type="hidden" name="meta_values" id="meta_values_value" value="{}" />
+          <input type="hidden" name="meta_schema" id="meta_schema_value" value="[]" />
+          <input type="hidden" name="meta_values" id="meta_values_value" value="{}" />
 
-            <div class="space-y-4 rounded-lg border border-base-300 p-3 bg-base-200/30">
-              <label class="label cursor-pointer justify-start gap-2">
-                <input type="checkbox" id="fixed-show-in-menu" class="checkbox checkbox-sm checkbox-primary" data-fixed-show-in-menu checked={fixedInitial.showInMenu} />
-                <span class="label-text">{t(currentLocale, "admin.postTypes.showInMenu")}</span>
-              </label>
-              <div id="show-in-menu-extra" class="ms-4 flex flex-col gap-2 border-l-2 border-base-300 pl-3" data-visible={String(fixedInitial.showInMenu)}>
+          <div class="flex flex-col gap-3">
+            <Collapse
+              title={t(currentLocale, "admin.postTypes.panel.languages")}
+              infoText={t(currentLocale, "admin.postTypes.panel.languagesInfo")}
+              arrow={true}
+              defaultOpen={true}
+              overflowVisible={true}
+            >
+              <div class="space-y-2 pt-1">
                 <div class="form-control">
-                  <label for="fixed-menu-order" class="label py-0">
-                    <span class="label-text text-sm">{t(currentLocale, "admin.postTypes.menuOrder")}</span>
+                  <label for="translation-pt_BR" class="label py-0">
+                    <span class="label-text text-sm">🇧🇷 PT_BR</span>
                   </label>
-                  <input type="number" id="fixed-menu-order" class="input input-bordered input-sm w-24" data-fixed-menu-order value={fixedInitial.menuOrder} />
+                  <input
+                    type="text"
+                    id="translation-pt_BR"
+                    name="translation_pt_BR"
+                    class="input input-bordered input-sm w-full"
+                    value={initialTranslations.pt_BR}
+                    placeholder={initialName}
+                  />
                 </div>
                 <div class="form-control">
-                  <label for="fixed-menu-options" class="label py-0">
-                    <span class="label-text text-sm">{t(currentLocale, "admin.postTypes.menuOptions")}</span>
+                  <label for="translation-es_ES" class="label py-0">
+                    <span class="label-text text-sm">🇪🇸 ES</span>
                   </label>
-                  <input type="text" id="fixed-menu-options" class="input input-bordered input-sm w-full font-mono" data-fixed-menu-options value={fixedInitial.menuOptionsDisplay} placeholder="new,list" />
+                  <input
+                    type="text"
+                    id="translation-es_ES"
+                    name="translation_es_ES"
+                    class="input input-bordered input-sm w-full"
+                    value={initialTranslations.es_ES}
+                    placeholder={initialName}
+                  />
                 </div>
                 <div class="form-control">
-                  <label for="fixed-icon" class="label py-0">
-                    <span class="label-text text-sm">{t(currentLocale, "admin.postTypes.icon")}</span>
+                  <label for="translation-en_US" class="label py-0">
+                    <span class="label-text text-sm">🇺🇸 EN_US</span>
                   </label>
-                  <IconPickerDropdown
-                    selectedIcon={fixedInitial.icon}
-                    searchPlaceholder={t(currentLocale, "admin.postTypes.iconSearch")}
-                    emptyMessage={t(currentLocale, "admin.postTypes.iconSearchEmpty")}
-                    listHint={t(currentLocale, "admin.postTypes.iconSearchHint")}
+                  <input
+                    type="text"
+                    id="translation-en_US"
+                    name="translation_en_US"
+                    class="input input-bordered input-sm w-full"
+                    value={initialTranslations.en_US}
+                    placeholder={initialName}
                   />
                 </div>
               </div>
+            </Collapse>
 
-              <label class="label cursor-pointer justify-start gap-2">
-                <input type="checkbox" id="fixed-post-thumbnail" class="checkbox checkbox-sm checkbox-primary" data-fixed-post-thumbnail checked={fixedInitial.postThumbnail} />
-                <span class="label-text">{t(currentLocale, "admin.postTypes.postThumbnail")}</span>
-              </label>
-
-              <div class="form-control border-t border-base-300 pt-3 mt-2">
-                <label class="label py-1">
-                  <span class="label-text font-medium">{t(currentLocale, "admin.postTypes.taxonomyLabel") || "Taxonomias"}</span>
+            <Collapse
+              title={t(currentLocale, "admin.postTypes.panel.views")}
+              infoText={t(currentLocale, "admin.postTypes.panel.viewsInfo")}
+              arrow={true}
+              overflowVisible={true}
+            >
+              <div class="space-y-3 pt-1">
+                <label class="label cursor-pointer justify-start gap-2 py-0">
+                  <input
+                    type="checkbox"
+                    id="fixed-show-in-menu"
+                    class="checkbox checkbox-sm checkbox-primary"
+                    data-fixed-show-in-menu
+                    checked={fixedInitial.showInMenu}
+                  />
+                  <span class="label-text">{t(currentLocale, "admin.postTypes.showInMenu")}</span>
                 </label>
-                <div class="flex flex-wrap gap-3">
-                  <label class="label cursor-pointer justify-start gap-2 py-0">
+                <div
+                  id="show-in-menu-extra"
+                  class="ms-4 flex flex-col gap-2 border-l-2 border-base-300 pl-3"
+                  data-visible={String(fixedInitial.showInMenu)}
+                >
+                  <div class="form-control">
+                    <label for="fixed-menu-order" class="label py-0">
+                      <span class="label-text text-sm">{t(currentLocale, "admin.postTypes.menuOrder")}</span>
+                    </label>
                     <input
-                      type="checkbox"
-                      class="checkbox checkbox-sm checkbox-primary fixed-taxonomy-cb"
-                      data-fixed-taxonomy-type="category"
-                      checked={fixedInitial.taxonomySelected.includes("category")}
+                      type="number"
+                      id="fixed-menu-order"
+                      class="input input-bordered input-sm w-24"
+                      data-fixed-menu-order
+                      value={fixedInitial.menuOrder}
                     />
-                    <span class="label-text text-sm">{t(currentLocale, "taxonomy.type.category")}</span>
-                  </label>
-                  <label class="label cursor-pointer justify-start gap-2 py-0">
+                  </div>
+                  <div class="form-control">
+                    <label for="fixed-menu-options" class="label py-0">
+                      <span class="label-text text-sm">{t(currentLocale, "admin.postTypes.menuOptions")}</span>
+                    </label>
                     <input
-                      type="checkbox"
-                      class="checkbox checkbox-sm checkbox-primary fixed-taxonomy-cb"
-                      data-fixed-taxonomy-type="tag"
-                      checked={fixedInitial.taxonomySelected.includes("tag")}
+                      type="text"
+                      id="fixed-menu-options"
+                      class="input input-bordered input-sm w-full font-mono"
+                      data-fixed-menu-options
+                      value={fixedInitial.menuOptionsDisplay}
+                      placeholder="new,list"
                     />
-                    <span class="label-text text-sm">{t(currentLocale, "taxonomy.type.tag")}</span>
-                  </label>
+                  </div>
+                  <div class="form-control">
+                    <label for="fixed-icon" class="label py-0">
+                      <span class="label-text text-sm">{t(currentLocale, "admin.postTypes.icon")}</span>
+                    </label>
+                    <IconPickerDropdown
+                      selectedIcon={fixedInitial.icon}
+                      searchPlaceholder={t(currentLocale, "admin.postTypes.iconSearch")}
+                      emptyMessage={t(currentLocale, "admin.postTypes.iconSearchEmpty")}
+                      listHint={t(currentLocale, "admin.postTypes.iconSearchHint")}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {postTypesNotInMenu.length > 0 && (
-                <div class="form-control border-t border-base-300 pt-3 mt-2">
-                  <label class="label py-1">
-                    <span class="label-text font-medium">{t(currentLocale, "admin.postTypes.postTypesLabel") || "Tipos de post (custom fields, etc.)"}</span>
-                  </label>
-                  <div class="flex flex-wrap gap-3">
-                    {postTypesNotInMenu.map((pt) => (
-                      <div>
+                <label class="label cursor-pointer justify-start gap-2 py-0">
+                  <input
+                    type="checkbox"
+                    id="fixed-post-thumbnail"
+                    class="checkbox checkbox-sm checkbox-primary"
+                    data-fixed-post-thumbnail
+                    checked={fixedInitial.postThumbnail}
+                  />
+                  <span class="label-text">{t(currentLocale, "admin.postTypes.postThumbnail")}</span>
+                </label>
+
+                {postTypesNotInMenu.length > 0 && (
+                  <div class="form-control border-t border-base-300 pt-3">
+                    <p class="label-text font-medium text-sm mb-2">
+                      {t(currentLocale, "admin.postTypes.postTypesLabel")}
+                    </p>
+                    <div class="flex flex-wrap gap-3">
+                      {postTypesNotInMenu.map((pt) => (
                         <label class="label cursor-pointer justify-start gap-2 py-0">
                           <input
                             type="checkbox"
@@ -301,19 +338,52 @@ const deleteConfirmMessage =
                           />
                           <span class="label-text text-sm">{pt.name}</span>
                         </label>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
+                )}
+              </div>
+            </Collapse>
+
+            <Collapse
+              title={t(currentLocale, "admin.postTypes.panel.categorization")}
+              infoText={t(currentLocale, "admin.postTypes.panel.categorizationInfo")}
+              arrow={true}
+              overflowVisible={true}
+            >
+              <div class="flex flex-col gap-3 pt-1">
+                <button
+                  type="button"
+                  id="post-type-add-category-btn"
+                  class="btn btn-outline btn-sm w-fit"
+                  data-slug-required={t(currentLocale, "admin.postTypes.slugRequiredForCategory")}
+                >
+                  {t(currentLocale, "admin.postTypes.addCategory")}
+                </button>
+                <div id="taxonomy-type-list" class="flex flex-wrap gap-3">
+                  {taxonomyTypesList.map((item) => (
+                    <label class="label cursor-pointer justify-start gap-2 py-0">
+                      <input
+                        type="checkbox"
+                        class="checkbox checkbox-sm checkbox-primary fixed-taxonomy-cb"
+                        data-fixed-taxonomy-type={item.type}
+                        checked={taxonomySelectedUi.includes(item.type)}
+                      />
+                      <span class="label-text text-sm">{taxonomyTypeLabel(item)}</span>
+                    </label>
+                  ))}
                 </div>
-              )}
-            </div>
+              </div>
+            </Collapse>
           </div>
+
           <AdminFormActions
             submitLabel={isEdit ? t(currentLocale, "admin.content.saveEdit") : t(currentLocale, "admin.content.saveNew")}
             cancelHref={listUrl}
             cancelLabel={t(currentLocale, "admin.content.cancel")}
           />
         </form>
+        <PostTypeTaxonomyModal locale={locale} />
       </AdminFormContainer>
 
       <div>
@@ -350,16 +420,56 @@ const deleteConfirmMessage =
   #show-in-menu-extra[data-visible="false"] {
     display: none;
   }
+
+  /* Dropdowns (ícone, locale) não devem ser cobertos por collapses abaixo no DOM */
+  #post-types-form .collapse-wrapper,
+  #post-types-form .collapse.overflow-visible,
+  #post-types-form .collapse.overflow-visible > .collapse-content {
+    overflow: visible;
+  }
+
+  #post-types-form .collapse-wrapper {
+    position: relative;
+    z-index: 0;
+  }
+
+  /* Painel com dropdown aberto fica acima dos collapses seguintes (ex.: Categorização) */
+  #post-types-form .collapse-wrapper:has(.dropdown.dropdown-open),
+  #post-types-form .collapse-wrapper:has(.dropdown:focus-within) {
+    z-index: 100;
+  }
+
+  #post-types-form .dropdown {
+    position: relative;
+    z-index: 1;
+  }
+
+  #post-types-form .dropdown.dropdown-open,
+  #post-types-form .dropdown:focus-within {
+    z-index: 110;
+  }
+
+  #post-types-form .dropdown .dropdown-content {
+    z-index: 500;
+  }
 </style>
 
 <script>
-  import { initPostTypeSlugFromName } from "../../shared/scripts/post-type-form.ts";
+  import {
+    initPostTypeSlugFromName,
+    initPostTypeTaxonomyMenuSync,
+    syncMenuOptionsFromTaxonomies,
+  } from "../../shared/scripts/post-type-form.ts";
 
   (function () {
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", initPostTypeSlugFromName);
-    } else {
+    function init() {
       initPostTypeSlugFromName();
+      initPostTypeTaxonomyMenuSync();
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
     }
   })();
 
@@ -368,6 +478,7 @@ const deleteConfirmMessage =
     const showInMenuExtra = document.getElementById("show-in-menu-extra");
     function toggleShowInMenuExtra() {
       if (showInMenuExtra) showInMenuExtra.setAttribute("data-visible", showInMenuCheck?.checked ? "true" : "false");
+      if (showInMenuCheck?.checked) syncMenuOptionsFromTaxonomies();
     }
     showInMenuCheck?.addEventListener("change", toggleShowInMenuExtra);
     if (document.readyState === "loading") {
@@ -438,6 +549,22 @@ const deleteConfirmMessage =
 
     const form = document.getElementById("meta_schema_value")?.closest("form");
     form?.addEventListener("submit", buildMetaSchemaFromFields);
+    form?.addEventListener("htmx:configRequest", buildMetaSchemaFromFields);
+
+    const slugRequiredMsg =
+      document.getElementById("post-type-add-category-btn")?.getAttribute("data-slug-required") ?? "";
+
+    document.getElementById("post-type-add-category-btn")?.addEventListener("click", () => {
+      const slugInput = document.getElementById("post-type-slug") as HTMLInputElement | null;
+      const slugHidden = form?.querySelector('input[name="slug"]') as HTMLInputElement | null;
+      const slug = (slugInput?.value ?? slugHidden?.value ?? "").trim();
+      if (!slug) {
+        if (slugRequiredMsg) alert(slugRequiredMsg);
+        return;
+      }
+      const toggle = document.getElementById("post-type-taxonomy-modal-toggle") as HTMLInputElement | null;
+      if (toggle) toggle.checked = true;
+    });
 
     document.body.addEventListener("htmx:afterRequest", (ev: Event) => {
       const evt = ev as CustomEvent & { detail?: { successful?: boolean; target?: HTMLElement; trigger?: HTMLElement; xhr?: { status?: number; responseText?: string; responseURL?: string } } };

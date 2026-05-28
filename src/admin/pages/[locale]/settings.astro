@@ -8,6 +8,7 @@ import { postTypes, posts, translations, translationsLanguages, locales as local
 import { and, eq, like, sql } from "drizzle-orm";
 import { getMenuItems } from "../../../utils/menu.ts";
 import { ensureTranslationsLoaded } from "../../../utils/i18n-helpers.ts";
+import { listTaxonomyTypes } from "../../../core/services/taxonomy-type-registry.ts";
 
 const locale = Astro.params["locale"] ?? defaultLocale;
 if (!locales.includes(locale as "en" | "es" | "pt-br")) {
@@ -72,8 +73,9 @@ let postTypesEditRecord: typeof postTypesList[0] | null = null;
 let menuPostMetaValues: Record<string, unknown> | null = null;
 let postTypeTranslations: { pt_BR: string; es_ES: string; en_US: string } | null = null;
 let postTypesNotInMenu: { id: number; slug: string; name: string }[] = [];
-
+let taxonomyTypesList: Awaited<ReturnType<typeof listTaxonomyTypes>> = [];
 if (showPostTypes) {
+  taxonomyTypesList = await listTaxonomyTypes(db, locale);
   postTypesList = await db
     .select({
       id: postTypes.id,
@@ -162,6 +164,7 @@ if (showPostTypes) {
     menuPostMetaValues={menuPostMetaValues}
     postTypeTranslations={postTypeTranslations}
     postTypesNotInMenu={postTypesNotInMenu}
+    taxonomyTypesList={taxonomyTypesList}
     pageLength={datalistPageLength}
   />
 ) : (

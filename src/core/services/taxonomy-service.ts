@@ -241,7 +241,11 @@ const TAXONOMY_ROOT_SLUG: Record<string, string> = {
 /**
  * ID do termo raiz do type (parent_id null). Cria o registro raiz se ainda não existir.
  */
-export async function getTaxonomyTypeRootId(db: Database, type: string): Promise<number | null> {
+export async function getTaxonomyTypeRootId(
+  db: Database,
+  type: string,
+  opts?: { displayName?: string }
+): Promise<number | null> {
   if (!type.trim()) return null;
 
   const [existing] = await db
@@ -259,7 +263,8 @@ export async function getTaxonomyTypeRootId(db: Database, type: string): Promise
 
   const now = Date.now();
   const slug = TAXONOMY_ROOT_SLUG[type] ?? type;
-  const name = slug.charAt(0).toUpperCase() + slug.slice(1);
+  const displayName = opts?.displayName?.trim();
+  const name = displayName || slug.charAt(0).toUpperCase() + slug.slice(1);
 
   const [inserted] = await db
     .insert(taxonomies)

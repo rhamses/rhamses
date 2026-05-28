@@ -1,23 +1,18 @@
 ---
 /**
  * Dropdown reutilizável de locales/idiomas (admin e outros contextos).
- *
- * - Lista por padrão todos os locales da tabela `locales`
- * - Se `settings.site_locales` estiver preenchida (ex: "10,20,30"), filtra pelos IDs informados
  */
 import { db } from "../db/index.ts";
 import { locales as localesTable, settings } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 export interface Props {
-  /** ID do locale selecionado inicialmente (opcional) */
   selectedLocaleId?: number | null;
-  /** Nome do campo hidden que será enviado no formulário */
   fieldName?: string;
-  /** Se true, o campo é obrigatório */
   required?: boolean;
-  /** Quantidade de colunas na lista de idiomas (padrão: 3) */
   cols?: number;
+  /** input-sm no trigger (modais e formulários compactos) */
+  compact?: boolean;
 }
 
 const {
@@ -25,6 +20,7 @@ const {
   fieldName = "id_locale_code",
   required = false,
   cols = 3,
+  compact = false,
 } = Astro.props;
 
 const gridColsClass =
@@ -65,7 +61,7 @@ try {
     if (parsed.length > 0) allowedLocaleIds = parsed;
   }
 } catch {
-  // ignore missing settings table/row
+  // ignore
 }
 
 const allowedSet = allowedLocaleIds ? new Set(allowedLocaleIds) : null;
@@ -73,43 +69,45 @@ const filteredLocales = allowedSet
   ? allLocales.filter((l) => allowedSet.has(l.id))
   : allLocales;
 
-const initialLocaleId = selectedLocaleId;
+const localesJson = JSON.stringify(filteredLocales);
+const initialLocaleId = selectedLocaleId ?? "";
+const inputClass = compact
+  ? "input input-bordered input-sm w-full flex items-center cursor-pointer"
+  : "input input-bordered w-full flex items-center cursor-pointer";
 ---
 
 <div
-  class="dropdown w-full"
+  class="dropdown w-full locale-dropdown-field"
+  data-locales={localesJson}
+  data-initial-locale-id={initialLocaleId}
   :class="{ 'dropdown-open': localeDropdownOpen }"
   x-on:click.outside="localeDropdownOpen = false"
-  x-data="languageDropdown"
+  x-data="localeDropdownField"
 >
-  <input type="hidden" name={fieldName} x-model="selectedLocaleId" {required} />
-  <label
-    tabindex="0"
-    class="input input-bordered w-full flex items-center cursor-pointer"
-    @click="toggleDropdown()"
-  >
-    <span x-show="selectedLocale" class="flex-1 flex items-center gap-2">
+  <input type="hidden" name={fieldName} x-model="selectedLocaleId" required={required || undefined} />
+  <label tabindex="0" class={inputClass} @click="toggleDropdown()">
+    <span x-show="selectedLocale" class="flex-1 flex items-center gap-2 min-w-0">
       <span x-text="selectedLocale ? getFlagEmoji(selectedLocale.locale_code) : ''"></span>
-      <span x-text="selectedLocale ? selectedLocale.language : 'Selecione um idioma'"></span>
+      <span class="truncate" x-text="selectedLocale ? selectedLocale.language : 'Selecione um idioma'"></span>
     </span>
-    <span x-show="!selectedLocale" class="flex-1 text-base-content/50">
-      Selecione um idioma
-    </span>
+    <span x-show="!selectedLocale" class="flex-1 text-base-content/50"> Selecione um idioma </span>
     <svg
       xmlns="http://www.w3.org/2000/svg"
       class="h-5 w-5 shrink-0"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
+      aria-hidden="true"
     >
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
     </svg>
   </label>
   <div
     tabindex="0"
-    class="dropdown-content bg-base-100 rounded-box z-10 w-full border border-base-300 p-2 shadow-lg mt-1 max-h-96 overflow-y-auto"
+    class="dropdown-content bg-base-100 rounded-box z-500 w-full border border-base-300 p-2 shadow-lg mt-1 max-h-96 overflow-y-auto"
     x-show="localeDropdownOpen"
     x-transition
+    @click.stop
   >
     <div class="w-full mb-2">
       <input
@@ -145,91 +143,81 @@ const initialLocaleId = selectedLocaleId;
   </div>
 </div>
 
-<script
-  define:vars={{
-    initialLocaleId,
-    localesData: JSON.stringify(filteredLocales),
-  }}
->
+<script>
   document.addEventListener("alpine:init", () => {
-    window.Alpine.data("languageDropdown", () => {
-      const locales = JSON.parse(localesData);
-      return {
-        selectedLocaleId: initialLocaleId,
-        localeSearch: "",
-        localeDropdownOpen: false,
-        locales: locales,
-        get filteredLocales() {
-          if (!this.localeSearch.trim()) return this.locales;
-          const search = this.localeSearch.toLowerCase();
-          return this.locales.filter(
-            (locale) =>
-              locale.language.toLowerCase().includes(search) ||
-              locale.country.toLowerCase().includes(search) ||
-              locale.locale_code.toLowerCase().includes(search) ||
-              locale.hello_world.toLowerCase().includes(search),
-          );
-        },
-        get selectedLocale() {
-          return this.locales.find((l) => l.id === this.selectedLocaleId);
-        },
-        selectLocale(localeId) {
-          this.selectedLocaleId = localeId;
-          this.localeSearch = "";
-          this.localeDropdownOpen = false;
-        },
-        toggleDropdown() {
-          this.localeDropdownOpen = !this.localeDropdownOpen;
-        },
-        getFlagEmoji(localeCode) {
-          const flagMap = {
-            en: "🇺🇸",
-            "en-gb": "🇬🇧",
-            "pt-br": "🇧🇷",
-            pt_br: "🇧🇷",
-            "pt-pt": "🇵🇹",
-            es: "🇪🇸",
-            "es-mx": "🇲🇽",
-            fr: "🇫🇷",
-            "fr-ca": "🇨🇦",
-            de: "🇩🇪",
-            it: "🇮🇹",
-            ja: "🇯🇵",
-            "zh-cn": "🇨🇳",
-            "zh-tw": "🇹🇼",
-            ru: "🇷🇺",
-            ko: "🇰🇷",
-            ar: "🇸🇦",
-            nl: "🇳🇱",
-            pl: "🇵🇱",
-            tr: "🇹🇷",
-            vi: "🇻🇳",
-            hi: "🇮🇳",
-            th: "🇹🇭",
-            id: "🇮🇩",
-            he: "🇮🇱",
-            el: "🇬🇷",
-            sv: "🇸🇪",
-            no: "🇳🇴",
-            da: "🇩🇰",
-            fi: "🇫🇮",
-            cs: "🇨🇿",
-            ro: "🇷🇴",
-            hu: "🇭🇺",
-            uk: "🇺🇦",
-            bg: "🇧🇬",
-            hr: "🇭🇷",
-            sr: "🇷🇸",
-            sk: "🇸🇰",
-            sl: "🇸🇮",
-          };
-          const code = localeCode.toLowerCase().replace(/_/g, "-");
-          const codeParts = code.split("-");
-          const baseCode = codeParts[0] || code;
-          return flagMap[code] || flagMap[baseCode] || "🌐";
-        },
-      };
-    });
+    const win = window as Window & { __localeDropdownFieldRegistered?: boolean };
+    if (win.__localeDropdownFieldRegistered) return;
+    win.__localeDropdownFieldRegistered = true;
+
+    (window.Alpine as { data: (name: string, fn: () => unknown) => void }).data(
+      "localeDropdownField",
+      () => ({
+      selectedLocaleId: null as number | null,
+      localeSearch: "",
+      localeDropdownOpen: false,
+      locales: [] as {
+        id: number;
+        language: string;
+        hello_world: string;
+        locale_code: string;
+        country: string;
+      }[],
+      init() {
+        const el = (this as unknown as { $el: HTMLElement }).$el;
+        const rawLocales = el.dataset["locales"] ?? "[]";
+        try {
+          this.locales = JSON.parse(rawLocales);
+        } catch {
+          this.locales = [];
+        }
+        const initial = el.dataset["initialLocaleId"];
+        if (initial !== undefined && initial !== "") {
+          const n = parseInt(initial, 10);
+          this.selectedLocaleId = Number.isNaN(n) ? null : n;
+        }
+      },
+      get filteredLocales() {
+        if (!this.localeSearch.trim()) return this.locales;
+        const search = this.localeSearch.toLowerCase();
+        return this.locales.filter(
+          (locale) =>
+            locale.language.toLowerCase().includes(search) ||
+            locale.country.toLowerCase().includes(search) ||
+            locale.locale_code.toLowerCase().includes(search) ||
+            locale.hello_world.toLowerCase().includes(search),
+        );
+      },
+      get selectedLocale() {
+        return this.locales.find((l) => l.id === this.selectedLocaleId);
+      },
+      selectLocale(localeId: number) {
+        this.selectedLocaleId = localeId;
+        this.localeSearch = "";
+        this.localeDropdownOpen = false;
+      },
+      toggleDropdown() {
+        this.localeDropdownOpen = !this.localeDropdownOpen;
+      },
+      getFlagEmoji(localeCode: string) {
+        const flagMap: Record<string, string> = {
+          en: "🇺🇸",
+          "en-gb": "🇬🇧",
+          "pt-br": "🇧🇷",
+          pt_br: "🇧🇷",
+          "pt-pt": "🇵🇹",
+          es: "🇪🇸",
+          "es-mx": "🇲🇽",
+          fr: "🇫🇷",
+          de: "🇩🇪",
+          it: "🇮🇹",
+          ja: "🇯🇵",
+          ko: "🇰🇷",
+        };
+        const code = localeCode.toLowerCase().replace(/_/g, "-");
+        const baseCode = code.split("-")[0] || code;
+        return flagMap[code] || flagMap[baseCode] || "🌐";
+      },
+    }),
+    );
   });
 </script>
-

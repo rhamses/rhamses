@@ -23,6 +23,7 @@ import {
   invalidateI18nCache,
 } from "../../../utils/kv-cache-sync.ts";
 import { invalidateTranslationsCache } from "../../../i18n/translations.ts";
+import { applyPostTypeTaxonomySave } from "../../../core/services/taxonomy-type-registry.ts";
 
 export const prerender = false;
 
@@ -151,6 +152,10 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
     if (!slug || !name) {
       return badRequestResponse("Slug e nome são obrigatórios");
     }
+
+    const applied = await applyPostTypeTaxonomySave(db, meta_schema, meta_values, slug);
+    meta_schema = applied.meta_schema;
+    meta_values = applied.meta_values;
 
     const now = Date.now();
     await db

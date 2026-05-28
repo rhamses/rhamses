@@ -149,5 +149,21 @@
   "admin.postTypes.postTypesLabel": "Tipos de post (custom fields, etc.)",
   "admin.postTypes.taxonomyLabel": "Taxonomias",
   "admin.postTypes.deleteConfirm": "Se apagar o post type todos os posts associados serão deletados.",
-  "admin.postTypes.confirmYes": "Sim"
+  "admin.postTypes.confirmYes": "Sim",
+  "admin.postTypes.panel.languages": "Idiomas",
+  "admin.postTypes.panel.languagesInfo": "Inserir aqui o label do campo nos idiomas do admin.",
+  "admin.postTypes.panel.views": "Visualizações",
+  "admin.postTypes.panel.viewsInfo": "Escolha o que deve aparecer ou não neste post.",
+  "admin.postTypes.panel.categorization": "Categorização",
+  "admin.postTypes.panel.categorizationInfo": "Selecione as taxonomias disponíveis para este tipo de post.",
+  "admin.postTypes.addCategory": "Adicionar categoria",
+  "admin.postTypes.categoryName": "Nome da categoria",
+  "admin.postTypes.categoryKeyHint": "Título da chave nas traduções (ex.: genero). O identificador técnico é gerado automaticamente.",
+  "admin.postTypes.translationLocale": "Idioma",
+  "admin.postTypes.translationValue": "Tradução",
+  "admin.postTypes.translationValuePlaceholder": "Texto exibido neste idioma",
+  "admin.postTypes.translationValueHint": "Cada linha grava o valor traduzido para o idioma selecionado (listagem de traduções).",
+  "admin.postTypes.translationsSection": "Traduções",
+  "admin.postTypes.addTranslation": "Adicionar tradução",
+  "admin.postTypes.slugRequiredForCategory": "Informe o slug do post type antes de adicionar uma categoria."
 }
