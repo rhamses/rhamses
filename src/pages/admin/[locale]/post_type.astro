@@ -1,0 +1,19 @@
+---
+/**
+ * Redireciona /admin/{locale}/post_type para a tela de tipos de post em settings.
+ * Rota dedicada (não usa [slug]) para o redirect funcionar no entrypoint do Pages.
+ */
+import { locales, defaultLocale } from "../../../i18n/index.ts";
+
+const locale = Astro.params["locale"] ?? defaultLocale;
+if (!locales.includes(locale as "en" | "es" | "pt-br")) {
+  return Astro.redirect(`/admin/${defaultLocale}/settings?page=post_types`);
+}
+
+const page = Astro.url.searchParams.get("page") ?? "post_types";
+const edit = Astro.url.searchParams.get("edit");
+const qs = new URLSearchParams({ page });
+if (edit) qs.set("edit", edit);
+
+return Astro.redirect(`/admin/${locale}/settings?${qs.toString()}`);
+---

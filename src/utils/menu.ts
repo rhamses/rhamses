@@ -105,7 +105,7 @@ export function resolveMenuOption(
     case "post_types":
       return {
         text: t(locale, "menu.option.post_types") || "Post Types",
-        link: `${basePath}?page=post_types`,
+        link: "admin/settings?page=post_types",
         icon: "line-md:document-list",
       };
     default:

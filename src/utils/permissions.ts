@@ -130,7 +130,7 @@ export async function canAccessRoute(
   if (normalized.startsWith("/admin/list")) {
     return can(db, roleId, CAPABILITY.LIST);
   }
-  if (normalized.startsWith("/admin/settings")) {
+  if (normalized.startsWith("/admin/settings") || normalized.startsWith("/admin/post_type")) {
     return can(db, roleId, CAPABILITY.SETTINGS);
   }
   if (normalized.startsWith("/admin/media")) {
@@ -161,7 +161,9 @@ export async function filterMenuItemsByRole(
     return menuItems.filter((item) => item.postTypeSlug === "dashboard");
   }
   if (!caps.has(CAPABILITY.SETTINGS)) {
-    return menuItems.filter((item) => item.postTypeSlug !== "settings");
+    return menuItems.filter(
+      (item) => item.postTypeSlug !== "settings" && item.postTypeSlug !== "post_type",
+    );
   }
   return menuItems;
 }

@@ -14,6 +14,8 @@ const t = (locale: string, key: string) => {
     "postType.page": "Página",
     "postType.dashboard": "Dashboard",
     "postType.settings": "Configurações",
+    "postType.post_type": "Post Type",
+    "menu.option.post_types": "Tipos de post",
   };
   return dict[key] ?? key;
 };
@@ -102,7 +104,8 @@ describe("menu", () => {
       expect(icons.find((x) => x.menu_order === 2)?.icon).toBe("line-md:document");
       expect(icons.find((x) => x.menu_order === 3)?.icon).toBe("line-md:list");
       expect(icons.find((x) => x.menu_order === 4)?.icon).toBe("line-md:cloud-alt-upload-loop");
-      expect(icons.find((x) => x.menu_order === 8)?.icon).toBe("line-md:cog");
+      expect(icons.find((x) => x.menu_order === 8)?.icon).toBe("line-md:document-list");
+      expect(icons.find((x) => x.menu_order === 9)?.icon).toBe("line-md:cog");
     });
   });
 
@@ -126,13 +129,18 @@ describe("menu", () => {
       expect(dashboardItem?.menuOrder).toBe(1);
       expect(dashboardItem?.icon).toBe("line-md:home");
 
+      const postTypeItem = items.find((i) => i.postTypeSlug === "post_type");
+      expect(postTypeItem?.menuOptions).toEqual(["post_types"]);
+      expect(postTypeItem?.menuOrder).toBe(8);
+      expect(postTypeItem?.icon).toBe("line-md:document-list");
+
       const settingsItem = items.find((i) => i.postTypeSlug === "settings");
-      expect(settingsItem?.menuOptions).toEqual(["general"]);
-      expect(settingsItem?.menuOrder).toBe(8);
+      expect(settingsItem?.menuOptions).toEqual(["list", "new", "cache"]);
+      expect(settingsItem?.menuOrder).toBe(9);
       expect(settingsItem?.icon).toBe("line-md:cog");
     });
 
-    it("returns items ordered by menu_order (Dashboard=1, Post=2, Page=3, …, Settings=8)", async () => {
+    it("returns items ordered by menu_order (Dashboard=1, …, Post Type=8, Settings=9)", async () => {
       const items = await getMenuItems(db);
       const slugs = items.map((i) => i.postTypeSlug);
       const dashboardIdx = slugs.indexOf("dashboard");
@@ -142,6 +150,7 @@ describe("menu", () => {
       const themesIdx = slugs.indexOf("themes");
       const userIdx = slugs.indexOf("user");
       const translationsIdx = slugs.indexOf("translations_languages");
+      const postTypeIdx = slugs.indexOf("post_type");
       const settingsIdx = slugs.indexOf("settings");
       expect(dashboardIdx).toBeGreaterThanOrEqual(0);
       expect(postIdx).toBeGreaterThanOrEqual(0);
@@ -150,6 +159,7 @@ describe("menu", () => {
       expect(themesIdx).toBeGreaterThanOrEqual(0);
       expect(userIdx).toBeGreaterThanOrEqual(0);
       expect(translationsIdx).toBeGreaterThanOrEqual(0);
+      expect(postTypeIdx).toBeGreaterThanOrEqual(0);
       expect(settingsIdx).toBeGreaterThanOrEqual(0);
       expect(dashboardIdx).toBeLessThan(postIdx);
       expect(postIdx).toBeLessThan(pageIdx);
@@ -157,7 +167,8 @@ describe("menu", () => {
       expect(attachmentIdx).toBeLessThan(themesIdx);
       expect(themesIdx).toBeLessThan(userIdx);
       expect(userIdx).toBeLessThan(translationsIdx);
-      expect(translationsIdx).toBeLessThan(settingsIdx);
+      expect(translationsIdx).toBeLessThan(postTypeIdx);
+      expect(postTypeIdx).toBeLessThan(settingsIdx);
     });
   });
 
@@ -183,11 +194,11 @@ describe("menu", () => {
       expect(r.icon).toBe("line-md:home");
     });
 
-    it('returns post type name, link with ?page=general, line-md:cog for "general"', () => {
-      const r = resolveMenuOption("general", "settings", "Configurações", "pt-br", t);
-      expect(r.text).toBe("Configurações");
-      expect(r.link).toBe("admin/settings?page=general");
-      expect(r.icon).toBe("line-md:cog");
+    it('returns Tipos de post, link admin/settings?page=post_types for "post_types"', () => {
+      const r = resolveMenuOption("post_types", "post_type", "Post Type", "pt-br", t);
+      expect(r.text).toBe("Tipos de post");
+      expect(r.link).toBe("admin/settings?page=post_types");
+      expect(r.icon).toBe("line-md:document-list");
     });
   });
 });
