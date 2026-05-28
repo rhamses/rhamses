@@ -44,6 +44,7 @@
   "menu.option.cache": "Cache",
   "menu.option.taxonomies_type_category": "Categories",
   "menu.option.post_types": "Post Types",
+  "menu.option.post_type_taxonomies": "Taxonomies",
   "postType.post": "Post",
   "postType.page": "Page",
   "postType.dashboard": "Dashboard",
@@ -83,6 +84,8 @@
   "admin.taxonomy.formDescription": "Description",
   "admin.taxonomy.formSave": "Save",
   "admin.taxonomy.typeColumn": "Type",
+  "admin.taxonomy.parentColumn": "Parent",
+  "admin.taxonomy.typeSelect": "Taxonomy type",
   "admin.user.formName": "Name",
   "admin.user.formEmail": "Email",
   "admin.user.formImage": "Image URL",
@@ -166,5 +169,9 @@
   "admin.postTypes.noTranslationLocales": "No languages configured. Set site_locales in settings or run the seed.",
   "admin.postTypes.translationsSection": "Translations",
   "admin.postTypes.addTranslation": "Add translation",
-  "admin.postTypes.slugRequiredForCategory": "Enter the post type slug before adding a category."
+  "admin.postTypes.slugRequiredForCategory": "Enter the post type slug before adding a category.",
+  "admin.taxonomy.editOnlyNotice": "Select a taxonomy from the list to edit.",
+  "admin.taxonomy.deleteConfirmCascade": "This will delete this taxonomy and all child taxonomies. Do you want to continue?",
+  "admin.taxonomy.panel.languages": "Languages",
+  "admin.taxonomy.panel.languagesInfo": "Set translations for admin and site locales."
 }

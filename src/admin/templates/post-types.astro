@@ -6,14 +6,17 @@
 import AdminLayout from "../layouts/AdminLayout.astro";
 import AdminFormContainer from "../components/admin/AdminFormContainer.astro";
 import AdminFormActions from "../components/admin/AdminFormActions.astro";
+import TranslationLocalesCollapse from "../components/admin/TranslationLocalesCollapse.astro";
 import DataList from "../components/DataList.astro";
 import IconPickerDropdown from "../components/IconPickerDropdown.astro";
 import Collapse from "../components/Collapse.astro";
 import PostTypeTaxonomyModal from "../components/PostTypeTaxonomyModal.astro";
+import { db } from "../../db/index.ts";
 import { t, type Locale } from "../../i18n/index.ts";
 import type { MenuItem } from "../../utils/menu.ts";
 import type { MetaSchemaItem } from "../../db/schema/meta_schema.ts";
 import { DEFAULT_ICON, isValidLineMdIcon } from "../../utils/line-md-icons.ts";
+import { resolveCategoryTranslationLocales } from "../../utils/admin-locales.ts";
 import {
   filterTaxonomyTypesForUi,
   type TaxonomyTypeListItem,
@@ -116,6 +119,12 @@ function taxonomyTypeLabel(item: TaxonomyTypeListItem): string {
 }
 const defaultTranslations = { pt_BR: "", es_ES: "", en_US: "" };
 const initialTranslations = postTypeTranslations ?? defaultTranslations;
+const translationLocales = await resolveCategoryTranslationLocales(db);
+const translationValuesByCode: Record<string, string> = {
+  pt_BR: initialTranslations.pt_BR,
+  es_ES: initialTranslations.es_ES,
+  en_US: initialTranslations.en_US,
+};
 
 const formAction = isEdit ? `/api/post-types/${editRecord!.id}` : "/api/post-types";
 const listUrl = `/admin/${locale}/settings?page=post_types`;
@@ -201,55 +210,17 @@ const deleteConfirmMessage =
           <input type="hidden" name="meta_values" id="meta_values_value" value="{}" />
 
           <div class="flex flex-col gap-3">
-            <Collapse
+            <TranslationLocalesCollapse
               title={t(currentLocale, "admin.postTypes.panel.languages")}
               infoText={t(currentLocale, "admin.postTypes.panel.languagesInfo")}
-              arrow={true}
-              defaultOpen={true}
-              overflowVisible={true}
-            >
-              <div class="space-y-2 pt-1">
-                <div class="form-control">
-                  <label for="translation-pt_BR" class="label py-0">
-                    <span class="label-text text-sm">🇧🇷 PT_BR</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="translation-pt_BR"
-                    name="translation_pt_BR"
-                    class="input input-bordered input-sm w-full"
-                    value={initialTranslations.pt_BR}
-                    placeholder={initialName}
-                  />
-                </div>
-                <div class="form-control">
-                  <label for="translation-es_ES" class="label py-0">
-                    <span class="label-text text-sm">🇪🇸 ES</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="translation-es_ES"
-                    name="translation_es_ES"
-                    class="input input-bordered input-sm w-full"
-                    value={initialTranslations.es_ES}
-                    placeholder={initialName}
-                  />
-                </div>
-                <div class="form-control">
-                  <label for="translation-en_US" class="label py-0">
-                    <span class="label-text text-sm">🇺🇸 EN_US</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="translation-en_US"
-                    name="translation_en_US"
-                    class="input input-bordered input-sm w-full"
-                    value={initialTranslations.en_US}
-                    placeholder={initialName}
-                  />
-                </div>
-              </div>
-            </Collapse>
+              locales={translationLocales}
+              noLocalesMessage={t(currentLocale, "admin.postTypes.noTranslationLocales")}
+              localeLabel={t(currentLocale, "admin.postTypes.translationLocale")}
+              valueLabel={t(currentLocale, "admin.postTypes.translationValue")}
+              valuePlaceholder={initialName}
+              valueHint={t(currentLocale, "admin.postTypes.translationValueHint")}
+              valuesByCode={translationValuesByCode}
+            />
 
             <Collapse
               title={t(currentLocale, "admin.postTypes.panel.views")}

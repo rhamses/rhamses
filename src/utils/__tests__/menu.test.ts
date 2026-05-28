@@ -16,6 +16,7 @@ const t = (locale: string, key: string) => {
     "postType.settings": "Configurações",
     "postType.post_type": "Post Type",
     "menu.option.post_types": "Tipos de post",
+    "menu.option.post_type_taxonomies": "Taxonomias",
   };
   return dict[key] ?? key;
 };
@@ -130,7 +131,7 @@ describe("menu", () => {
       expect(dashboardItem?.icon).toBe("line-md:home");
 
       const postTypeItem = items.find((i) => i.postTypeSlug === "post_type");
-      expect(postTypeItem?.menuOptions).toEqual(["post_types"]);
+      expect(postTypeItem?.menuOptions).toEqual(["post_types", "post_type_taxonomies"]);
       expect(postTypeItem?.menuOrder).toBe(8);
       expect(postTypeItem?.icon).toBe("line-md:document-list");
 
@@ -199,6 +200,13 @@ describe("menu", () => {
       expect(r.text).toBe("Tipos de post");
       expect(r.link).toBe("admin/settings?page=post_types");
       expect(r.icon).toBe("line-md:document-list");
+    });
+
+    it('returns Taxonomias, link admin/post_type?domain=taxonomies&scope=all for "post_type_taxonomies"', () => {
+      const r = resolveMenuOption("post_type_taxonomies", "post_type", "Post Type", "pt-br", t);
+      expect(r.text).toBe("Taxonomias");
+      expect(r.link).toBe("admin/post_type?domain=taxonomies&scope=all");
+      expect(r.icon).toBe("line-md:tag");
     });
   });
 });

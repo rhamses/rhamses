@@ -2,7 +2,7 @@
  * Registry global de tipos de taxonomia (built-in + custom via translations namespace taxonomyType).
  */
 import { and, eq, inArray, isNull, or } from "drizzle-orm";
-import { translations, taxonomies, locales } from "../../db/schema.ts";
+import { translations, taxonomies, locales, translationsLanguages } from "../../db/schema.ts";
 import type { Database } from "../../shared/types/database.ts";
 import type { MetaSchemaItem } from "../../db/schema/meta_schema.ts";
 import { ADMIN_DB_LOCALE_CODES } from "../../utils/admin-locale-constants.ts";
@@ -108,36 +108,27 @@ export async function listTaxonomyTypes(
   db: Database,
   _adminLocale: string
 ): Promise<TaxonomyTypeListItem[]> {
-  const items: TaxonomyTypeListItem[] = BUILTIN_TAXONOMY_TYPES.map((type) => ({
-    type,
-    label: type,
-    isBuiltin: true,
-  }));
+  const roots = await db
+    .select({
+      type: taxonomies.type,
+      label: taxonomies.name,
+    })
+    .from(taxonomies)
+    .where(or(isNull(taxonomies.parent_id), eq(taxonomies.parent_id, 0)))
+    .orderBy(taxonomies.name);
 
-  const keys = await db
-    .select({ key: translations.key, id: translations.id })
-    .from(translations)
-    .where(eq(translations.namespace, TAXONOMY_TYPE_NAMESPACE));
-
+  const items: TaxonomyTypeListItem[] = [];
+  const seen = new Set<string>();
   const builtinSet = new Set<string>(BUILTIN_TAXONOMY_TYPES);
-  for (const row of keys) {
-    const type = row.key;
-    if (!type || builtinSet.has(type)) continue;
-
-    let label = type;
-    const [root] = await db
-      .select({ name: taxonomies.name })
-      .from(taxonomies)
-      .where(
-        and(
-          eq(taxonomies.type, type),
-          or(isNull(taxonomies.parent_id), eq(taxonomies.parent_id, 0))
-        )
-      )
-      .limit(1);
-    if (root?.name?.trim()) label = root.name.trim();
-
-    items.push({ type, label, isBuiltin: false });
+  for (const row of roots) {
+    const type = (row.type ?? "").trim();
+    if (!type || seen.has(type)) continue;
+    seen.add(type);
+    items.push({
+      type,
+      label: (row.label ?? "").trim() || type,
+      isBuiltin: builtinSet.has(type as BuiltinTaxonomyType),
+    });
   }
 
   return items;
@@ -216,4 +207,35 @@ export async function createTaxonomyType(
   await getTaxonomyTypeRootId(db, slug, { displayName: name });
 
   return { type: slug, key: slug, label: name };
+}
+
+/**
+ * Remove namespaces de tradução ligados a um tipo de taxonomia customizado.
+ * Não remove tipos built-in (category/tag).
+ */
+export async function removeTaxonomyTypeTranslationNamespaces(
+  db: Database,
+  typeSlug: string
+): Promise<void> {
+  if (!typeSlug || BUILTIN_TAXONOMY_TYPES.includes(typeSlug as BuiltinTaxonomyType)) return;
+
+  const keys = [
+    { namespace: TAXONOMY_TYPE_NAMESPACE, key: typeSlug },
+    { namespace: TAXONOMY_TYPE_I18N_NAMESPACE, key: typeSlug },
+    { namespace: MENU_OPTION_NAMESPACE, key: taxonomyTypeMenuOptionKey(typeSlug) },
+  ];
+
+  for (const item of keys) {
+    const [translationRow] = await db
+      .select({ id: translations.id })
+      .from(translations)
+      .where(and(eq(translations.namespace, item.namespace), eq(translations.key, item.key)))
+      .limit(1);
+    if (!translationRow) continue;
+
+    await db
+      .delete(translationsLanguages)
+      .where(eq(translationsLanguages.id_translations, translationRow.id));
+    await db.delete(translations).where(eq(translations.id, translationRow.id));
+  }
 }

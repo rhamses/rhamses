@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { db } from "../../../db/index.ts";
-import { taxonomies, postsTaxonomies, locales } from "../../../db/schema.ts";
-import { eq, and, ne } from "drizzle-orm";
+import { taxonomies, postsTaxonomies, locales, translations, translationsLanguages } from "../../../db/schema.ts";
+import { eq, and, ne, inArray } from "drizzle-orm";
 import { slugify } from "../../../utils/slugify.ts";
 import { requireMinRole } from "../../../utils/api-auth.ts";
 import { getString, getNumber } from "../../../utils/form-data.ts";
@@ -13,9 +13,79 @@ import {
   jsonResponse,
 } from "../../../utils/http-responses.ts";
 import { HTTP_STATUS_CODES } from "../../../shared/constants/index.ts";
-import { invalidateContentListByTable } from "../../../utils/kv-cache-sync.ts";
+import { invalidateContentListByTable, invalidateI18nCache } from "../../../utils/kv-cache-sync.ts";
+import { invalidateTranslationsCache } from "../../../i18n/translations.ts";
+import {
+  removeTaxonomyTypeTranslationNamespaces,
+  TAXONOMY_TYPE_I18N_NAMESPACE,
+} from "../../../core/services/taxonomy-type-registry.ts";
+import { upsertNamespaceTranslationRows } from "../../../utils/translation-upsert.ts";
 
 export const prerender = false;
+
+async function deleteTaxonomyTypeTranslationByKey(dbKey: string): Promise<void> {
+  const [translationRow] = await db
+    .select({ id: translations.id })
+    .from(translations)
+    .where(
+      and(eq(translations.namespace, TAXONOMY_TYPE_I18N_NAMESPACE), eq(translations.key, dbKey)),
+    )
+    .limit(1);
+  if (!translationRow) return;
+  await db
+    .delete(translationsLanguages)
+    .where(eq(translationsLanguages.id_translations, translationRow.id));
+  await db.delete(translations).where(eq(translations.id, translationRow.id));
+}
+
+async function parseTaxonomyTranslationRows(formData: FormData) {
+  const byLocaleCode = new Map<string, string>();
+  for (const [key, raw] of formData.entries()) {
+    if (!key.startsWith("translation_")) continue;
+    const localeCode = key.slice("translation_".length).trim();
+    if (!localeCode) continue;
+    const value = String(raw ?? "").trim();
+    if (!value) continue;
+    byLocaleCode.set(localeCode, value);
+  }
+  if (byLocaleCode.size === 0) return [];
+
+  const localeCodes = [...byLocaleCode.keys()];
+  const localeRows = await db
+    .select({ id: locales.id, locale_code: locales.locale_code })
+    .from(locales)
+    .where(inArray(locales.locale_code, localeCodes));
+
+  return localeRows
+    .map((row) => ({
+      locale_id: row.id,
+      value: byLocaleCode.get(row.locale_code) ?? "",
+    }))
+    .filter((row) => row.locale_id && row.value);
+}
+
+async function collectTaxonomyCascadeIds(rootId: number): Promise<number[]> {
+  const ids: number[] = [rootId];
+  const seen = new Set<number>([rootId]);
+
+  for (let i = 0; i < ids.length; i += 1) {
+    const parentId = ids[i];
+    if (parentId == null) continue;
+    const children = await db
+      .select({ id: taxonomies.id })
+      .from(taxonomies)
+      .where(eq(taxonomies.parent_id, parentId));
+
+    for (const child of children) {
+      if (!seen.has(child.id)) {
+        seen.add(child.id);
+        ids.push(child.id);
+      }
+    }
+  }
+
+  return ids;
+}
 
 async function handleTaxonomyUpdate(
   termId: number,
@@ -30,7 +100,6 @@ async function handleTaxonomyUpdate(
     const description = descriptionRaw === "" ? null : descriptionRaw;
     const type = getString(formData, "type");
     const parent_id = getNumber(formData, "parent_id", null);
-    const id_locale_code = getNumber(formData, "id_locale_code", null);
     if (!name || !type) {
       return badRequestResponse("Bad Request");
     }
@@ -38,6 +107,14 @@ async function handleTaxonomyUpdate(
     if (!slug) {
       return badRequestResponse("Bad Request");
     }
+
+    const [current] = await db
+      .select({ slug: taxonomies.slug })
+      .from(taxonomies)
+      .where(eq(taxonomies.id, termId))
+      .limit(1);
+    const previousSlug = current?.slug ?? null;
+
     const existing = await db
       .select({ id: taxonomies.id })
       .from(taxonomies)
@@ -55,21 +132,36 @@ async function handleTaxonomyUpdate(
         description,
         type,
         parent_id,
-        id_locale_code,
         updated_at: now,
       })
       .where(eq(taxonomies.id, termId));
 
     await invalidateContentListByTable(locals, "taxonomies");
+    const translationRows = await parseTaxonomyTranslationRows(formData);
+    if (translationRows.length > 0) {
+      if (previousSlug && previousSlug !== slug) {
+        await deleteTaxonomyTypeTranslationByKey(previousSlug);
+      }
+      await upsertNamespaceTranslationRows(
+        db,
+        TAXONOMY_TYPE_I18N_NAMESPACE,
+        slug,
+        translationRows,
+      );
+      await invalidateI18nCache(locals);
+      invalidateTranslationsCache();
+    }
 
-    let language = "—";
-    if (id_locale_code != null) {
-      const [loc] = await db
-        .select({ language: locales.language })
-        .from(locales)
-        .where(eq(locales.id, id_locale_code))
+    const language = "—";
+
+    let parent_name = "—";
+    if (parent_id != null) {
+      const [parentRow] = await db
+        .select({ name: taxonomies.name })
+        .from(taxonomies)
+        .where(eq(taxonomies.id, parent_id))
         .limit(1);
-      if (loc) language = loc.language;
+      if (parentRow?.name) parent_name = parentRow.name;
     }
 
     return jsonResponse(
@@ -77,7 +169,7 @@ async function handleTaxonomyUpdate(
       200,
       {
         "HX-Trigger": JSON.stringify({
-          "taxonomy-updated": { id: termId, name, slug, type, language },
+          "taxonomy-updated": { id: termId, name, slug, type, language, parent_name },
         }),
       }
     );
@@ -120,13 +212,41 @@ export const DELETE: APIRoute = async ({ params, request, locals }) => {
   }
   const termId = parseInt(id, 10);
   try {
-    await db
-      .update(taxonomies)
-      .set({ parent_id: null })
-      .where(eq(taxonomies.parent_id, termId));
-    await db.delete(postsTaxonomies).where(eq(postsTaxonomies.term_id, termId));
-    await db.delete(taxonomies).where(eq(taxonomies.id, termId));
+    const [target] = await db
+      .select({
+        type: taxonomies.type,
+        slug: taxonomies.slug,
+        parent_id: taxonomies.parent_id,
+      })
+      .from(taxonomies)
+      .where(eq(taxonomies.id, termId))
+      .limit(1);
+    const targetType = target?.type ?? null;
+    const targetSlug = target?.slug ?? null;
+    const isRootTerm = target?.parent_id == null;
+
+    const idsToDelete = await collectTaxonomyCascadeIds(termId);
+    await db.delete(postsTaxonomies).where(inArray(postsTaxonomies.term_id, idsToDelete));
+    await db.delete(taxonomies).where(inArray(taxonomies.id, idsToDelete));
+
+    if (isRootTerm && targetSlug) {
+      await deleteTaxonomyTypeTranslationByKey(targetSlug);
+    }
+
+    if (targetType) {
+      const [remaining] = await db
+        .select({ id: taxonomies.id })
+        .from(taxonomies)
+        .where(eq(taxonomies.type, targetType))
+        .limit(1);
+      if (!remaining) {
+        await removeTaxonomyTypeTranslationNamespaces(db, targetType);
+      }
+    }
+
     await invalidateContentListByTable(locals, "taxonomies");
+    await invalidateI18nCache(locals);
+    invalidateTranslationsCache();
     return htmlResponse("", 200);
   } catch (err) {
     console.error("DELETE /api/taxonomies/[id]", err);

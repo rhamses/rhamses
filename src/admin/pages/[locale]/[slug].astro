@@ -57,6 +57,13 @@ if (TemplateComponent) {
     params[key] = value;
   });
 } else {
+  if (slug === "post_type") {
+    const page = Astro.url.searchParams.get("page") ?? "post_types";
+    const edit = Astro.url.searchParams.get("edit");
+    const qs = new URLSearchParams({ page });
+    if (edit) qs.set("edit", edit);
+    return Astro.redirect(`/admin/${locale}/settings?${qs.toString()}`);
+  }
   if (slug === "post" || slug === "page") {
     return Astro.redirect(`/admin/${locale}/list?type=${slug}&limit=10&page=1`);
   }
@@ -69,10 +76,13 @@ if (TemplateComponent) {
   return Astro.redirect(`/admin/${locale}`);
 }
 
+const scope = Astro.url.searchParams.get("scope") ?? "";
 const pageTitle =
-  domain === "taxonomies" && type
-    ? t(locale, "taxonomy.type." + type)
-    : slug ?? "Admin";
+  domain === "taxonomies" && scope === "all"
+    ? t(locale, "menu.option.post_type_taxonomies")
+    : domain === "taxonomies" && type
+      ? t(locale, "taxonomy.type." + type)
+      : slug ?? "Admin";
 ---
 
 {

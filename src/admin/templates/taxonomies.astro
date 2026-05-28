@@ -1,18 +1,26 @@
 ---
 /**
  * Template para o domínio "taxonomies".
- * Duas colunas: esquerda (5/12) formulário Nome/Slug/Descrição + Salvar; direita (6/12) datalist name, slug, type.
- * type e parent_id vêm da URL e do registro pai do type.
+ * - type na URL: lista filhos de um tipo (ex.: ?domain=taxonomies&type=category).
+ * - scope=all: lista todas as taxonomias (menu Post Type → Taxonomias).
  */
 import AdminTwoColumns from "../components/admin/AdminTwoColumns.astro";
+import TranslationLocalesCollapse from "../components/admin/TranslationLocalesCollapse.astro";
 import DataList from "../components/DataList.astro";
-import LocaleDropdown from "../../components/LocaleDropdown.astro";
 import { db } from "../../db/index.ts";
-import { settings, taxonomies, locales as localesTable } from "../../db/schema.ts";
-import { and, eq } from "drizzle-orm";
+import { settings, taxonomies, locales as localesTable, translations, translationsLanguages } from "../../db/schema.ts";
+import { and, eq, isNull } from "drizzle-orm";
 import { getTaxonomyTypeRootId } from "../../core/services/taxonomy-service.ts";
 import { t, type Locale } from "../../i18n/index.ts";
 import type { MenuItem } from "../../utils/menu.ts";
+import { resolveCategoryTranslationLocales } from "../../utils/admin-locales.ts";
+import { TAXONOMY_TYPE_I18N_NAMESPACE } from "../../core/services/taxonomy-type-registry.ts";
+
+function taxonomyTypeDisplayLabel(locale: Locale, typeSlug: string): string {
+  const key = `taxonomy.type.${typeSlug}`;
+  const translated = t(locale, key);
+  return translated !== key ? translated : typeSlug;
+}
 
 export interface Props {
   locale: string;
@@ -50,19 +58,23 @@ try {
 } catch {
   // ignore missing settings table/row
 }
+const scope = params["scope"] ?? "";
+const isAllScope = scope === "all";
 const action = params["action"] ?? "";
 const idParam = params["id"] ?? "";
 const isEdit = action === "edit" && idParam && /^\d+$/.test(idParam);
+const showAllScopeEditForm = !isAllScope || isEdit;
 
-const parentId = type ? await getTaxonomyTypeRootId(db, type) : null;
+const parentId = !isAllScope && type ? await getTaxonomyTypeRootId(db, type) : null;
+const translationLocales = await resolveCategoryTranslationLocales(db);
 
-// Em modo edição, carregar o registro para preencher o formulário
 let editTaxonomy: {
   id: number;
   name: string;
   slug: string;
   description: string | null;
   type: string;
+  parent_id: number | null;
   id_locale_code: number | null;
 } | null = null;
 if (isEdit && idParam) {
@@ -74,6 +86,7 @@ if (isEdit && idParam) {
       slug: taxonomies.slug,
       description: taxonomies.description,
       type: taxonomies.type,
+      parent_id: taxonomies.parent_id,
       id_locale_code: taxonomies.id_locale_code,
     })
     .from(taxonomies)
@@ -86,14 +99,26 @@ if (isEdit && idParam) {
       slug: row.slug,
       description: row.description ?? "",
       type: row.type,
+      parent_id: row.parent_id ?? null,
       id_locale_code: row.id_locale_code ?? null,
     };
   }
 }
 
-// Lista apenas os filhos do type (parent_id = rootId), não a raiz; join com locales para nome do idioma
-const taxonomyRows =
-  type && parentId != null
+const taxonomyRows = isAllScope
+  ? await db
+      .select({
+        id: taxonomies.id,
+        name: taxonomies.name,
+        slug: taxonomies.slug,
+        type: taxonomies.type,
+        language: localesTable.language,
+      })
+      .from(taxonomies)
+      .leftJoin(localesTable, eq(taxonomies.id_locale_code, localesTable.id))
+      .where(isNull(taxonomies.parent_id))
+      .orderBy(taxonomies.type, taxonomies.name)
+  : type && parentId != null
     ? await db
         .select({
           id: taxonomies.id,
@@ -104,11 +129,10 @@ const taxonomyRows =
         })
         .from(taxonomies)
         .leftJoin(localesTable, eq(taxonomies.id_locale_code, localesTable.id))
-        .where(
-          and(eq(taxonomies.type, type), eq(taxonomies.parent_id, parentId)),
-        )
+        .where(and(eq(taxonomies.type, type), eq(taxonomies.parent_id, parentId)))
         .orderBy(taxonomies.name)
     : [];
+
 const columns = [
   { key: "name", label: t(currentLocale, "admin.taxonomy.formName") },
   { key: "slug", label: t(currentLocale, "admin.taxonomy.formSlug") },
@@ -116,18 +140,54 @@ const columns = [
   { key: "language", label: t(currentLocale, "admin.content.language") },
 ];
 
-const baseUrl = `/admin/${locale}/${slug}?domain=${domain}&type=${encodeURIComponent(type)}`;
+const baseUrl = isAllScope
+  ? `/admin/${locale}/${slug}?domain=${domain}&scope=all`
+  : `/admin/${locale}/${slug}?domain=${domain}&type=${encodeURIComponent(type)}`;
+
+const editLinkTemplate = `${baseUrl}&action=edit&id={id}`;
 
 const initialName = editTaxonomy?.name ?? "";
 const initialSlug = editTaxonomy?.slug ?? "";
 const initialDescription = editTaxonomy?.description ?? "";
-const initialLocaleId = editTaxonomy?.id_locale_code ?? null;
+const initialType = editTaxonomy?.type ?? type;
+const initialParentId = editTaxonomy?.parent_id ?? parentId ?? null;
+const deleteConfirmText = isAllScope
+  ? t(currentLocale, "admin.taxonomy.deleteConfirmCascade")
+  : t(locale, "admin.list.deleteConfirm");
+let translationValuesByCode: Record<string, string> = {};
+if (editTaxonomy?.slug) {
+  const [translationRow] = await db
+    .select({ id: translations.id })
+    .from(translations)
+    .where(
+      and(
+        eq(translations.namespace, TAXONOMY_TYPE_I18N_NAMESPACE),
+        eq(translations.key, editTaxonomy.slug),
+      ),
+    )
+    .limit(1);
+
+  if (translationRow) {
+    const rows = await db
+      .select({
+        locale_code: localesTable.locale_code,
+        value: translationsLanguages.value,
+      })
+      .from(translationsLanguages)
+      .innerJoin(localesTable, eq(translationsLanguages.id_locale_code, localesTable.id))
+      .where(eq(translationsLanguages.id_translations, translationRow.id));
+
+    translationValuesByCode = Object.fromEntries(
+      rows.map((row) => [row.locale_code, row.value ?? ""]),
+    );
+  }
+}
 
 const taxonomyItems = taxonomyRows.map((r) => ({
   id: r.id,
   name: r.name,
   slug: r.slug,
-  type: r.type,
+  type: taxonomyTypeDisplayLabel(currentLocale, r.type),
   language: r.language ?? "—",
 }));
 
@@ -203,6 +263,8 @@ const emptyColspan = columns.length + 1;
                   name: data.taxonomy.name,
                   slug: data.taxonomy.slug,
                   type: data.taxonomy.type,
+                  typeLabel: data.taxonomy.typeLabel,
+                  parent_name: data.taxonomy.parent_name,
                   language: data.taxonomy.language ?? "—",
                 };
                 window.dispatchEvent(
@@ -228,6 +290,15 @@ const emptyColspan = columns.length + 1;
 
   <AdminTwoColumns>
     <div slot="left">
+      {
+        isAllScope && !isEdit ? (
+          <div class="alert">
+            <span>{t(currentLocale, "admin.taxonomy.editOnlyNotice")}</span>
+          </div>
+        ) : null
+      }
+      {
+        showAllScopeEditForm ? (
       <form
         class="flex flex-col gap-3 taxonomy-form"
         data-base-url={baseUrl}
@@ -235,10 +306,17 @@ const emptyColspan = columns.length + 1;
         x-data="taxonomyForm"
         @submit.prevent="handleSubmit($event)"
       >
-        <input type="hidden" name="type" value={type} />
         {
-          parentId != null && (
-            <input type="hidden" name="parent_id" value={parentId} />
+          isAllScope ? (
+            <>
+              <input type="hidden" name="type" value={initialType} />
+              <input type="hidden" name="parent_id" value={initialParentId ?? ""} />
+            </>
+          ) : (
+            <>
+              <input type="hidden" name="type" value={type} />
+              {parentId != null && <input type="hidden" name="parent_id" value={parentId} />}
+            </>
           )
         }
         {
@@ -290,28 +368,34 @@ const emptyColspan = columns.length + 1;
             class="textarea textarea-bordered textarea-sm w-full"
             x-model="description"></textarea>
         </div>
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text"
-              >{t(currentLocale, "admin.content.language")}</span
-            >
-          </label>
-          <LocaleDropdown selectedLocaleId={initialLocaleId} cols={1} />
-        </div>
+        <TranslationLocalesCollapse
+          title={t(currentLocale, "admin.taxonomy.panel.languages")}
+          infoText={t(currentLocale, "admin.taxonomy.panel.languagesInfo")}
+          locales={translationLocales}
+          noLocalesMessage={t(currentLocale, "admin.postTypes.noTranslationLocales")}
+          localeLabel={t(currentLocale, "admin.postTypes.translationLocale")}
+          valueLabel={t(currentLocale, "admin.postTypes.translationValue")}
+          valuePlaceholder={initialName}
+          valueHint={t(currentLocale, "admin.postTypes.translationValueHint")}
+          valuesByCode={translationValuesByCode}
+        />
         <div data-taxonomy-form-error class="min-h-6"></div>
         <button type="submit" class="btn btn-primary btn-sm">
           {t(currentLocale, "admin.taxonomy.formSave")}
         </button>
       </form>
+        ) : null
+      }
     </div>
     <div
       slot="right"
       id="taxonomy-list-wrapper"
-      data-edit-link-template={`/admin/${locale}/${slug}?domain=${domain}&type=${encodeURIComponent(type)}&action=edit&id={id}`}
+      data-all-scope={isAllScope ? "true" : "false"}
+      data-edit-link-template={editLinkTemplate}
       data-delete-path-template="/api/taxonomies/{id}"
       data-edit-label={t(locale, "admin.list.edit")}
       data-delete-label={t(locale, "admin.list.delete")}
-      data-delete-confirm={t(locale, "admin.list.deleteConfirm")}
+      data-delete-confirm={deleteConfirmText}
       data-actions-label={t(locale, "admin.list.actions")}
     >
       <DataList
@@ -333,9 +417,9 @@ const emptyColspan = columns.length + 1;
         editLabel={t(locale, "admin.list.edit")}
         deleteLabel={t(locale, "admin.list.delete")}
         actionConfig={{
-          editLinkTemplate: `/admin/${locale}/${slug}?domain=${domain}&type=${encodeURIComponent(type)}&action=edit&id={id}`,
-          deletePathTemplate: `/api/taxonomies/{id}`,
-          deleteConfirm: t(locale, "admin.list.deleteConfirm"),
+          editLinkTemplate,
+          deletePathTemplate: "/api/taxonomies/{id}",
+          deleteConfirm: deleteConfirmText,
         }}
       />
     </div>
@@ -353,26 +437,9 @@ const emptyColspan = columns.length + 1;
         .replace(/"/g, "&quot;");
     }
 
-    function resetFormAndDropdown(form) {
+    function resetTaxonomyForm() {
       window.dispatchEvent(new CustomEvent("taxonomy-form-reset"));
-      const dropdown = form.querySelector("[x-data*='languageDropdown']");
-      if (dropdown && window.Alpine) {
-        const data = window.Alpine.$data(dropdown);
-        if (data && typeof data["selectedLocaleId"] !== "undefined")
-          data["selectedLocaleId"] = null;
-      }
     }
-
-    window.addEventListener("taxonomy-form-reset", function () {
-      const form = document.querySelector("form.taxonomy-form");
-      if (!form) return;
-      const dropdown = form.querySelector("[x-data*='languageDropdown']");
-      if (dropdown && window.Alpine) {
-        const data = window.Alpine.$data(dropdown);
-        if (data && typeof data["selectedLocaleId"] !== "undefined")
-          data["selectedLocaleId"] = null;
-      }
-    });
 
     window.addEventListener("taxonomy-added", function (ev) {
       const d = ev.detail;
@@ -387,14 +454,22 @@ const emptyColspan = columns.length + 1;
       const deletePath =
         wrapper.getAttribute("data-delete-path-template")?.replace("{id}", String(d.id)) ?? "#";
 
-      dl.addDataListRow(
-        wrapper,
-        [
-          escapeHtml(d.name),
-          escapeHtml(d.slug),
-          escapeHtml(d.type),
-          escapeHtml(d.language),
-        ],
+      const isAll = wrapper.getAttribute("data-all-scope") === "true";
+      const rowCells = isAll
+        ? [
+            escapeHtml(d.name),
+            escapeHtml(d.slug),
+            escapeHtml(d.typeLabel ?? d.type),
+            escapeHtml(d.language),
+          ]
+        : [
+            escapeHtml(d.name),
+            escapeHtml(d.slug),
+            escapeHtml(d.type),
+            escapeHtml(d.language),
+          ];
+
+      dl.addDataListRow(wrapper, rowCells,
         dl.buildDataListActionsHtml({
           editLink,
           deletePath,
@@ -406,7 +481,7 @@ const emptyColspan = columns.length + 1;
       );
 
       const form = document.querySelector("form.taxonomy-form");
-      if (form instanceof HTMLFormElement) resetFormAndDropdown(form);
+      if (form instanceof HTMLFormElement) resetTaxonomyForm();
     });
 
     window.addEventListener("taxonomy-updated", function (ev) {
@@ -417,12 +492,17 @@ const emptyColspan = columns.length + 1;
       const dl = window.edgepressDataList;
       if (!wrapper || !dl) return;
 
-      dl.updateDataListRowByEditId(wrapper, d.id, [
-        d.name ?? "—",
-        d.slug ?? "—",
-        d.type ?? "—",
-        d.language ?? "—",
-      ]);
+      const isAll = wrapper.getAttribute("data-all-scope") === "true";
+      const rowCells = isAll
+        ? [
+            d.name ?? "—",
+            d.slug ?? "—",
+            d.typeLabel ?? d.type ?? "—",
+            d.language ?? "—",
+          ]
+        : [d.name ?? "—", d.slug ?? "—", d.type ?? "—", d.language ?? "—"];
+
+      dl.updateDataListRowByEditId(wrapper, d.id, rowCells);
 
       const form = document.querySelector("form.taxonomy-form");
       if (window.history && window.history.replaceState) {

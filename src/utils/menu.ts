@@ -56,21 +56,6 @@ export function resolveMenuOption(
   t: TFunction
 ): MenuOptionResult {
   const basePath = `admin/${postTypeSlug}`;
-  const parsed = parseTableColumnValue(option);
-  if (parsed) {
-    const { table, column, value } = parsed;
-    const taxonomyTypeKey = `taxonomy.type.${value}`;
-    const taxonomyLabel = t(locale, taxonomyTypeKey);
-    const text =
-      (taxonomyLabel !== taxonomyTypeKey ? taxonomyLabel : null) ||
-      t(locale, `menu.option.${option}`) ||
-      value;
-    return {
-      text,
-      link: `${basePath}?domain=${encodeURIComponent(table)}&${column}=${encodeURIComponent(value)}`,
-      icon: "line-md:tag",
-    };
-  }
   switch (option) {
     case "list":
       return {
@@ -108,13 +93,34 @@ export function resolveMenuOption(
         link: "admin/settings?page=post_types",
         icon: "line-md:document-list",
       };
-    default:
+    case "post_type_taxonomies":
       return {
-        text: t(locale, `menu.option.${option}`) || option,
-        link: `${basePath}?page=${option}`,
-        icon: "line-md:document",
+        text: t(locale, "menu.option.post_type_taxonomies") || "Taxonomies",
+        link: `${basePath}?domain=taxonomies&scope=all`,
+        icon: "line-md:tag",
       };
+    default:
+      break;
   }
+
+  const parsed = parseTableColumnValue(option);
+  if (parsed) {
+    const { table, column, value } = parsed;
+    const taxonomyTypeKey = `taxonomy.type.${value}`;
+    const taxonomyLabel = t(locale, taxonomyTypeKey);
+    const text = taxonomyLabel !== taxonomyTypeKey ? taxonomyLabel : value;
+    return {
+      text,
+      link: `${basePath}?domain=${encodeURIComponent(table)}&${column}=${encodeURIComponent(value)}`,
+      icon: "line-md:tag",
+    };
+  }
+
+  return {
+    text: t(locale, `menu.option.${option}`) || option,
+    link: `${basePath}?page=${option}`,
+    icon: "line-md:document",
+  };
 }
 
 /**

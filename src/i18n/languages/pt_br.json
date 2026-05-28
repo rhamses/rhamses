@@ -44,6 +44,7 @@
   "menu.option.cache": "Cache",
   "menu.option.taxonomies_type_category": "Categorias",
   "menu.option.post_types": "Tipos de post",
+  "menu.option.post_type_taxonomies": "Taxonomias",
   "postType.post": "Post",
   "postType.page": "Página",
   "postType.dashboard": "Dashboard",
@@ -83,6 +84,8 @@
   "admin.taxonomy.formDescription": "Descrição",
   "admin.taxonomy.formSave": "Salvar",
   "admin.taxonomy.typeColumn": "Tipo",
+  "admin.taxonomy.parentColumn": "Pai",
+  "admin.taxonomy.typeSelect": "Tipo de taxonomia",
   "admin.user.formName": "Nome",
   "admin.user.formEmail": "E-mail",
   "admin.user.formImage": "URL da imagem",
@@ -166,5 +169,9 @@
   "admin.postTypes.noTranslationLocales": "Nenhum idioma configurado. Defina site_locales nas configurações ou execute o seed.",
   "admin.postTypes.translationsSection": "Traduções",
   "admin.postTypes.addTranslation": "Adicionar tradução",
-  "admin.postTypes.slugRequiredForCategory": "Informe o slug do post type antes de adicionar uma categoria."
+  "admin.postTypes.slugRequiredForCategory": "Informe o slug do post type antes de adicionar uma categoria.",
+  "admin.taxonomy.editOnlyNotice": "Selecione uma taxonomia na lista para editar.",
+  "admin.taxonomy.deleteConfirmCascade": "Esta ação vai deletar esta taxonomia e todos os filhos. Deseja continuar?",
+  "admin.taxonomy.panel.languages": "Idiomas",
+  "admin.taxonomy.panel.languagesInfo": "Defina traduções para idiomas do admin e do site."
 }
