@@ -23,6 +23,19 @@ export interface DataListTableConfig {
   hasActions: boolean;
   dataColumnCount: number;
   pageLength: number;
+  language?: {
+    emptyTable?: string;
+    info?: string;
+    infoEmpty?: string;
+    infoFiltered?: string;
+    lengthMenu?: string;
+    search?: string;
+    zeroRecords?: string;
+    paginate?: {
+      previous?: string;
+      next?: string;
+    };
+  };
   /** Chaves de todas as colunas de dados exibidas, em ordem. */
   displayColumnKeys?: string[];
   /** Subconjunto de `displayColumnKeys` que aceita ordenação. */

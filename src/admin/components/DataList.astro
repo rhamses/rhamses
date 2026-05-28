@@ -78,6 +78,15 @@ interface Props {
   previousLabel?: string;
   nextLabel?: string;
   pageOfText?: string;
+  /** i18n do DataTables (info/search/length menu/...). */
+  dtInfo?: string;
+  dtInfoEmpty?: string;
+  dtInfoFiltered?: string;
+  dtLengthMenu?: string;
+  dtSearch?: string;
+  dtZeroRecords?: string;
+  dtPaginatePrevious?: string;
+  dtPaginateNext?: string;
   /** Ordenação no servidor sincronizada com DataTables (Shift+clique = multi-coluna). */
   serverOrder?: {
     entries: DataListOrderEntry[];
@@ -106,6 +115,14 @@ const {
   previousLabel = "Anterior",
   nextLabel = "Próxima",
   pageOfText = "",
+  dtInfo = "Mostrando _START_ a _END_ de _TOTAL_ itens",
+  dtInfoEmpty = "Mostrando 0 a 0 de 0 itens",
+  dtInfoFiltered = "(filtrado de _MAX_ itens no total)",
+  dtLengthMenu = "Mostrar _MENU_ itens",
+  dtSearch = "Buscar:",
+  dtZeroRecords = "Nenhum registro encontrado.",
+  dtPaginatePrevious = "Anterior",
+  dtPaginateNext = "Próxima",
   serverOrder,
   emptyColspan: emptyColspanProp,
 } = Astro.props;
@@ -113,6 +130,8 @@ const {
 const displayColumns = columns.filter((col) => col.key !== "id");
 const emptyColspan =
   emptyColspanProp ?? displayColumns.length + (actionConfig ? 1 : 0);
+// Mantido por compatibilidade com callers; DataTables usa `emptyTable` no client.
+void emptyColspan;
 const displayColumnKeys = displayColumns.map((col) => col.key);
 const sortableColumnKeys = displayColumns
   .filter((col) => col.sortable !== false)
@@ -134,6 +153,19 @@ const dtConfig: DataListTableConfig = {
   displayColumnKeys,
   sortableColumnKeys,
   pageLength: resolvedPageLength,
+  language: {
+    emptyTable: emptyMessage,
+    info: dtInfo,
+    infoEmpty: dtInfoEmpty,
+    infoFiltered: dtInfoFiltered,
+    lengthMenu: dtLengthMenu,
+    search: dtSearch,
+    zeroRecords: dtZeroRecords,
+    paginate: {
+      previous: dtPaginatePrevious,
+      next: dtPaginateNext,
+    },
+  },
   ...(serverOrder
     ? {
         initialOrder: buildDataTableInitialOrder(

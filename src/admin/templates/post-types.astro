@@ -34,6 +34,7 @@ export interface Props {
   menuItems: MenuItem[];
   currentUser: { email: string; name: string };
   items: PostTypeRow[];
+  pageLength?: number;
   /** Quando em edição, o registro sendo editado */
   editRecord: PostTypeRow | null;
   /** Valores do post de menu (tabela posts) quando em edição; preenche o formulário */
@@ -81,6 +82,7 @@ function getFixedMetaInitial(meta: unknown, values?: Record<string, unknown> | n
 const { locale, menuItems, currentUser, items, editRecord, menuPostMetaValues, postTypeTranslations, postTypesNotInMenu = [] } = Astro.props;
 const currentLocale = locale as Locale;
 const isEdit = editRecord != null;
+const pageLength = Astro.props.pageLength ?? 10;
 
 const initialSlug = editRecord?.slug ?? "";
 const initialName = editRecord?.name ?? "";
@@ -321,6 +323,15 @@ const deleteConfirmMessage =
           items={listItems}
           emptyMessage={t(currentLocale, "admin.list.noItems")}
           emptyColspan={3}
+          pageLength={pageLength}
+          dtInfo={t(currentLocale, "admin.list.dtInfo")}
+          dtInfoEmpty={t(currentLocale, "admin.list.dtInfoEmpty")}
+          dtInfoFiltered={t(currentLocale, "admin.list.dtInfoFiltered")}
+          dtLengthMenu={t(currentLocale, "admin.list.dtLengthMenu")}
+          dtSearch={t(currentLocale, "admin.list.dtSearch")}
+          dtZeroRecords={t(currentLocale, "admin.list.dtZeroRecords")}
+          dtPaginatePrevious={t(currentLocale, "admin.list.previous")}
+          dtPaginateNext={t(currentLocale, "admin.list.next")}
           editLabel={t(currentLocale, "admin.list.edit")}
           deleteLabel={t(currentLocale, "admin.list.delete")}
           actionsColumnLabel={t(currentLocale, "admin.list.actions")}

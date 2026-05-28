@@ -12,9 +12,10 @@ export interface Props {
   menuItems: MenuItem[];
   currentUser: { email: string; name: string };
   kvItems: { key: string; valuePreview: string }[];
+  pageLength?: number;
 }
 
-const { locale, menuItems, currentUser, kvItems } = Astro.props;
+const { locale, menuItems, currentUser, kvItems, pageLength = 10 } = Astro.props;
 const currentLocale = locale as Locale;
 
 const pageTitle = t(currentLocale, "admin.cache.title");
@@ -50,6 +51,15 @@ const resetButtonLabel = t(currentLocale, "admin.cache.resetButton");
             items={listItems}
             emptyMessage={t(currentLocale, "admin.cache.noItems")}
             emptyColspan={2}
+            pageLength={pageLength}
+            dtInfo={t(currentLocale, "admin.list.dtInfo")}
+            dtInfoEmpty={t(currentLocale, "admin.list.dtInfoEmpty")}
+            dtInfoFiltered={t(currentLocale, "admin.list.dtInfoFiltered")}
+            dtLengthMenu={t(currentLocale, "admin.list.dtLengthMenu")}
+            dtSearch={t(currentLocale, "admin.list.dtSearch")}
+            dtZeroRecords={t(currentLocale, "admin.list.dtZeroRecords")}
+            dtPaginatePrevious={t(currentLocale, "admin.list.previous")}
+            dtPaginateNext={t(currentLocale, "admin.list.next")}
           />
         </div>
 

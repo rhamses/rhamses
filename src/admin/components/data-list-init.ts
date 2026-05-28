@@ -11,6 +11,14 @@ const lengthMenu = [
   [...DATA_LIST_PAGE_LENGTH_OPTIONS],
 ] as [number[], number[]];
 
+function buildLengthMenu(config: DataListTableConfig): [number[], number[]] {
+  const options = new Set<number>(DATA_LIST_PAGE_LENGTH_OPTIONS as unknown as number[]);
+  const initial = normalizeDataListPageLength(config.pageLength);
+  options.add(initial);
+  const sorted = Array.from(options).sort((a, b) => a - b);
+  return [sorted, sorted] as [number[], number[]];
+}
+
 function buildColumnDefs(config: DataListTableConfig): DataTables.ColumnDefsSettings[] {
   const defs: DataTables.ColumnDefsSettings[] = [];
   let idx = 0;
@@ -113,6 +121,8 @@ export async function initDataListTable(
   const pageLength = normalizeDataListPageLength(config.pageLength);
   const orderingEnabled =
     clientFeatures || (config.serverBackedOrder && (config.sortableColumnKeys?.length ?? 0) > 0);
+  const lengthMenu = buildLengthMenu(config);
+  const language = config.language ?? { emptyTable: config.emptyMessage };
 
   const dt = new DataTable(table, {
     paging: clientFeatures,
@@ -125,9 +135,7 @@ export async function initDataListTable(
     lengthMenu,
     order: config.initialOrder?.length ? config.initialOrder : undefined,
     autoWidth: false,
-    language: {
-      emptyTable: config.emptyMessage,
-    },
+    language,
     columnDefs: buildColumnDefs(config),
     layout: {
       topStart: "pageLength",

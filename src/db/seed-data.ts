@@ -166,4 +166,5 @@ export const DEFAULT_SETTINGS_ROWS: SettingsRow[] = [
   { name: "default_posttype", value: "post", autoload: true },
   { name: "default_taxonomies", value: "category,tag", autoload: true },
   { name: "active_theme", value: "2026", autoload: true },
+  { name: "datalist_pagination", value: "10", autoload: true },
 ];

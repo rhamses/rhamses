@@ -10,6 +10,8 @@ import { getSourceKind } from "../../../utils/content-source.ts";
 import { ensureTranslationsLoaded } from "../../../utils/i18n-helpers.ts";
 import { formatColumnLabel } from "../../../utils/list-utils.ts";
 import { DATA_LIST_CLIENT_FETCH_LIMIT } from "../../../admin/components/data-list-page-length.ts";
+import { settings } from "../../../db/schema.ts";
+import { eq } from "drizzle-orm";
 
 const locale = Astro.params["locale"] ?? defaultLocale;
 if (!locales.includes(locale as "en" | "es" | "pt-br")) {
@@ -34,6 +36,25 @@ if (!allowed) {
 const allMenuItems = await getMenuItems(db);
 const menuItems = await filterMenuItemsByRole(db, allMenuItems, roleId);
 const userCanDelete = await canDelete(db, roleId);
+
+const layoutUser = {
+  email: (currentUser as { email?: string }).email ?? "",
+  name: (currentUser as { name?: string }).name ?? "",
+  image: (currentUser as { image?: string | null | undefined }).image ?? null,
+};
+
+let datalistPageLength = 10;
+try {
+  const [row] = await db
+    .select({ value: settings.value })
+    .from(settings)
+    .where(eq(settings.name, "datalist_pagination"))
+    .limit(1);
+  const n = row?.value ? parseInt(String(row.value), 10) : NaN;
+  if (!Number.isNaN(n) && n > 0) datalistPageLength = n;
+} catch {
+  // ignore missing settings table/row
+}
 
 const type = Astro.url.searchParams.get("type") ?? "post";
 const status = Astro.url.searchParams.get("status") ?? undefined;
@@ -112,16 +133,25 @@ if (loadFromTable) {
 }
 ---
 
-<AdminLayout title={t(locale, "admin.list.title")} locale={locale} menuItems={menuItems} user={currentUser}>
+<AdminLayout title={t(locale, "admin.list.title")} locale={locale} menuItems={menuItems} user={layoutUser}>
   <div class="p-6 overflow-x-auto">
     <DataList
       columns={listColumns}
       items={listItems}
       emptyMessage={t(locale, "admin.list.noItems")}
       emptyColspan={listEmptyColspan}
+      pageLength={datalistPageLength}
       actionsColumnLabel={t(locale, "admin.list.actions")}
       editLabel={t(locale, "admin.list.edit")}
       deleteLabel={t(locale, "admin.list.delete")}
+      dtInfo={t(locale, "admin.list.dtInfo")}
+      dtInfoEmpty={t(locale, "admin.list.dtInfoEmpty")}
+      dtInfoFiltered={t(locale, "admin.list.dtInfoFiltered")}
+      dtLengthMenu={t(locale, "admin.list.dtLengthMenu")}
+      dtSearch={t(locale, "admin.list.dtSearch")}
+      dtZeroRecords={t(locale, "admin.list.dtZeroRecords")}
+      dtPaginatePrevious={t(locale, "admin.list.previous")}
+      dtPaginateNext={t(locale, "admin.list.next")}
       {...(userCanDelete && deletePathTemplate
         ? {
             actionConfig: {

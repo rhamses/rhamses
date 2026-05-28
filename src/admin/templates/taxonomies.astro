@@ -8,7 +8,7 @@ import AdminTwoColumns from "../components/admin/AdminTwoColumns.astro";
 import DataList from "../components/DataList.astro";
 import LanguageDropdown from "../components/LanguageDropdown.astro";
 import { db } from "../../db/index.ts";
-import { taxonomies, locales as localesTable } from "../../db/schema.ts";
+import { settings, taxonomies, locales as localesTable } from "../../db/schema.ts";
 import { and, eq } from "drizzle-orm";
 import { getTaxonomyTypeRootId } from "../../core/services/taxonomy-service.ts";
 import { t, type Locale } from "../../i18n/index.ts";
@@ -34,11 +34,22 @@ const {
   slug,
   domain,
   type,
-  menuItems,
   params = {},
-  user,
 } = Astro.props;
 const currentLocale = locale as Locale;
+
+let datalistPageLength = 10;
+try {
+  const [row] = await db
+    .select({ value: settings.value })
+    .from(settings)
+    .where(eq(settings.name, "datalist_pagination"))
+    .limit(1);
+  const n = row?.value ? parseInt(String(row.value), 10) : NaN;
+  if (!Number.isNaN(n) && n > 0) datalistPageLength = n;
+} catch {
+  // ignore missing settings table/row
+}
 const action = params["action"] ?? "";
 const idParam = params["id"] ?? "";
 const isEdit = action === "edit" && idParam && /^\d+$/.test(idParam);
@@ -301,6 +312,7 @@ const emptyColspan = columns.length + 1;
       data-edit-label={t(locale, "admin.list.edit")}
       data-delete-label={t(locale, "admin.list.delete")}
       data-delete-confirm={t(locale, "admin.list.deleteConfirm")}
+      data-actions-label={t(locale, "admin.list.actions")}
     >
       <DataList
         columns={columns}
@@ -308,6 +320,15 @@ const emptyColspan = columns.length + 1;
         linkColumnKey="name"
         emptyMessage={t(currentLocale, "admin.list.noItems")}
         emptyColspan={emptyColspan}
+        pageLength={datalistPageLength}
+        dtInfo={t(currentLocale, "admin.list.dtInfo")}
+        dtInfoEmpty={t(currentLocale, "admin.list.dtInfoEmpty")}
+        dtInfoFiltered={t(currentLocale, "admin.list.dtInfoFiltered")}
+        dtLengthMenu={t(currentLocale, "admin.list.dtLengthMenu")}
+        dtSearch={t(currentLocale, "admin.list.dtSearch")}
+        dtZeroRecords={t(currentLocale, "admin.list.dtZeroRecords")}
+        dtPaginatePrevious={t(currentLocale, "admin.list.previous")}
+        dtPaginateNext={t(currentLocale, "admin.list.next")}
         actionsColumnLabel={t(locale, "admin.list.actions")}
         editLabel={t(locale, "admin.list.edit")}
         deleteLabel={t(locale, "admin.list.delete")}
@@ -380,7 +401,7 @@ const emptyColspan = columns.length + 1;
           deleteConfirm: wrapper.getAttribute("data-delete-confirm") ?? "",
           editLabel: wrapper.getAttribute("data-edit-label") ?? "Editar",
           deleteLabel: wrapper.getAttribute("data-delete-label") ?? "Deletar",
-          actionsLabel: "Actions",
+          actionsLabel: wrapper.getAttribute("data-actions-label") ?? "Actions",
         }),
       );
 

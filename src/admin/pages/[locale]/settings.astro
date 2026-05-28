@@ -4,7 +4,7 @@ import CacheTemplate from "../../../admin/templates/cache.astro";
 import PostTypesTemplate from "../../../admin/templates/post-types.astro";
 import { t, locales, defaultLocale } from "../../../i18n/index.ts";
 import { db } from "../../../db/index.ts";
-import { postTypes, posts, translations, translationsLanguages, locales as localesTable } from "../../../db/schema.ts";
+import { postTypes, posts, translations, translationsLanguages, locales as localesTable, settings } from "../../../db/schema.ts";
 import { and, eq, like, sql } from "drizzle-orm";
 import { getMenuItems } from "../../../utils/menu.ts";
 import { ensureTranslationsLoaded } from "../../../utils/i18n-helpers.ts";
@@ -35,6 +35,19 @@ const menuItems = await filterMenuItemsByRole(db, allMenuItems, roleId);
 const domain = Astro.url.searchParams.get("domain");
 const page = Astro.url.searchParams.get("page");
 const editId = Astro.url.searchParams.get("edit");
+
+let datalistPageLength = 10;
+try {
+  const [row] = await db
+    .select({ value: settings.value })
+    .from(settings)
+    .where(eq(settings.name, "datalist_pagination"))
+    .limit(1);
+  const n = row?.value ? parseInt(String(row.value), 10) : NaN;
+  if (!Number.isNaN(n) && n > 0) datalistPageLength = n;
+} catch {
+  // ignore missing settings table/row
+}
 
 let kvItems: { key: string; valuePreview: string }[] = [];
 if (domain === "cache") {
@@ -137,6 +150,7 @@ if (showPostTypes) {
     menuItems={menuItems}
     currentUser={{ email: user.email ?? "", name: user.name ?? "" }}
     kvItems={kvItems}
+    pageLength={datalistPageLength}
   />
 ) : showPostTypes ? (
   <PostTypesTemplate
@@ -148,6 +162,7 @@ if (showPostTypes) {
     menuPostMetaValues={menuPostMetaValues}
     postTypeTranslations={postTypeTranslations}
     postTypesNotInMenu={postTypesNotInMenu}
+    pageLength={datalistPageLength}
   />
 ) : (
   <AdminLayout title={t(locale, "admin.menu.settings")} locale={locale} menuItems={menuItems} user={user}>
