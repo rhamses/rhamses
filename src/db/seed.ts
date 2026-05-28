@@ -9,6 +9,7 @@ import {
   translations,
   translationsLanguages,
 } from "./schema.ts";
+import { deduplicateLocales } from "./deduplicate-locales.ts";
 import {
   ROLE_CAPABILITY_ROWS,
   FULL_LOCALES,
@@ -514,5 +515,10 @@ export async function runSeed(db: any): Promise<void> {
         updated_at: now,
       });
     }
+  }
+
+  const { removed } = await deduplicateLocales(db);
+  if (removed.length > 0) {
+    console.log(`Locales duplicados removidos: ${removed.join(", ")}`);
   }
 }
