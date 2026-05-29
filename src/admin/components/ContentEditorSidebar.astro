@@ -2,6 +2,8 @@
 import TaxonomiesBlocks from "./TaxonomiesBlocks.astro";
 import LocaleDropdown from "../../components/LocaleDropdown.astro";
 import UppyUpload from "./UppyUpload.astro";
+import { db } from "../../db/index.ts";
+import { getSiteLocaleIdsFromSettings } from "../../utils/admin-locales.ts";
 import { t } from "../../i18n/index.ts";
 import type { Locale } from "../../i18n/index.ts";
 
@@ -42,6 +44,8 @@ const {
   taxonomyBlocks,
   selectedTermIds,
 } = Astro.props;
+
+const siteLocaleIds = await getSiteLocaleIdsFromSettings(db);
 ---
 
 <aside
@@ -179,7 +183,12 @@ const {
               <label class="label py-0">
                 <span class="label-text text-xs">{t(locale, "admin.content.language")}</span>
               </label>
-              <LocaleDropdown selectedLocaleId={initialLocaleId} fieldName="id_locale_code" cols={1} />
+              <LocaleDropdown
+                selectedLocaleId={initialLocaleId}
+                fieldName="id_locale_code"
+                cols={1}
+                allowedLocaleIds={siteLocaleIds}
+              />
               <p class="text-xs text-base-content/50 mt-1">
                 Selecione o idioma para este conteúdo
               </p>
