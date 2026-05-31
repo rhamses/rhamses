@@ -1,6 +1,8 @@
 ---
 import TaxonomiesBlocks from "./TaxonomiesBlocks.astro";
 import LocaleDropdown from "../../components/LocaleDropdown.astro";
+import ParentPostDropdown from "../../components/ParentPostDropdown.astro";
+import type { ParentPostOption } from "../../core/services/content-page-data.ts";
 import UppyUpload from "./UppyUpload.astro";
 import { db } from "../../db/index.ts";
 import { getSiteLocaleIdsFromSettings } from "../../utils/admin-locales.ts";
@@ -21,6 +23,8 @@ interface Props {
   action: string;
   users: { id: string; name: string }[];
   initialLocaleId: number | null;
+  initialParentId: number | null;
+  parentPostOptions: ParentPostOption[];
   initialSlug: string;
   initialExcerpt: string;
    initialOrder: string;
@@ -36,6 +40,8 @@ const {
   action,
   users,
   initialLocaleId,
+  initialParentId = null,
+  parentPostOptions = [],
   initialSlug = "",
   initialExcerpt = "",
   initialOrder: _initialOrder = "",
@@ -190,7 +196,39 @@ const siteLocaleIds = await getSiteLocaleIdsFromSettings(db);
                 allowedLocaleIds={siteLocaleIds}
               />
               <p class="text-xs text-base-content/50 mt-1">
-                Selecione o idioma para este conteúdo
+                {t(locale, "admin.content.languageHint")}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="collapse collapse-arrow join-item border border-base-300 overflow-visible parent-post-accordion">
+        <input
+          type="radio"
+          name={asideAccordionName}
+          aria-label={t(locale, "admin.content.parent")}
+        />
+        <div class="collapse-title font-semibold text-sm py-2 min-h-0">
+          {t(locale, "admin.content.parent")}
+        </div>
+        <div class="collapse-content text-sm overflow-visible">
+          <div class="flex flex-col gap-3">
+            <div class="form-control">
+              <label class="label py-0">
+                <span class="label-text text-xs">{t(locale, "admin.content.parent")}</span>
+              </label>
+              <ParentPostDropdown
+                parentPosts={parentPostOptions}
+                selectedParentId={initialParentId}
+                fieldName="parent_id"
+                compact
+                searchPlaceholder={t(locale, "admin.content.parentSearch")}
+                noParentLabel={t(locale, "admin.content.noParent")}
+                selectPlaceholder={t(locale, "admin.content.parentSelect")}
+              />
+              <p class="text-xs text-base-content/50 mt-1">
+                {t(locale, "admin.content.parentHint")}
               </p>
             </div>
           </div>
@@ -256,3 +294,14 @@ const siteLocaleIds = await getSiteLocaleIdsFromSettings(db);
     </div>
   </div>
 </aside>
+
+<style>
+  .parent-post-accordion.collapse.overflow-visible,
+  .parent-post-accordion.collapse.overflow-visible > .collapse-content {
+    overflow: visible;
+  }
+  .parent-post-dropdown-field.dropdown.dropdown-open {
+    position: relative;
+    z-index: 9999;
+  }
+</style>

@@ -122,6 +122,13 @@ let initialStatus = "draft";
 let initialAuthorId = "";
 let initialOrder = "";
 let initialLocaleId: number | null = null;
+let initialParentId: number | null = null;
+let parentPostOptions: Array<{
+  id: number;
+  title: string;
+  slug: string;
+  post_type_slug: string;
+}> = [];
 let asideAccordionName = "content-aside";
 let thumbnailPath = "";
 let thumbnailUrl = "";
@@ -156,6 +163,8 @@ if (!showUserTemplate && !showAttachmentTemplate && !showTranslationsTemplate &&
   initialAuthorId = result.initialAuthorId;
   initialOrder = result.initialOrder;
   initialLocaleId = result.initialLocaleId;
+  initialParentId = result.initialParentId;
+  parentPostOptions = result.parentPostOptions;
   asideAccordionName = result.asideAccordionName;
   thumbnailPath = result.thumbnailPath;
   thumbnailUrl = result.thumbnailUrl;
@@ -297,6 +306,8 @@ const showAlternateTemplate =
         action={action}
         users={users}
         initialLocaleId={initialLocaleId}
+        initialParentId={initialParentId}
+        parentPostOptions={parentPostOptions}
         initialSlug={initialSlug}
         initialExcerpt={initialExcerpt}
         initialOrder={initialOrder}

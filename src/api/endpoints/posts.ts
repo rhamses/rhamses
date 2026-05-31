@@ -8,6 +8,7 @@ import {
   createPost,
   getPostTypeId,
   linkPostTaxonomies,
+  postExists,
   processPostAttachments,
   updatePost,
   updatePostMetaValues,
@@ -79,8 +80,18 @@ import { syncSeoMetadataFromPostSave } from "../../core/services/seo-metadata-se
 
 // Auth
 import { requireMinRole, resolveAuthorIdForRole } from "../../utils/api-auth.ts";
-
 export const prerender = false;
+
+/** Normaliza parent_id de hierarquia (não confundir com parent_id de attachments). */
+async function resolveHierarchyParentId(
+  rawParentId: number | null | undefined,
+  currentPostId: number | null,
+): Promise<number | null> {
+  if (rawParentId == null || rawParentId <= 0) return null;
+  if (currentPostId != null && rawParentId === currentPostId) return null;
+  const exists = await postExists(db, rawParentId);
+  return exists ? rawParentId : null;
+}
 
 /**
  * POST /api/posts
@@ -161,8 +172,8 @@ export async function POST({
       true,
     );
 
-    // Extrair parent_id (usado quando criar attachments filhos)
-    const parentId = getOptionalNumber(formData, "parent_id");
+    // parent_id do formulário: hierarquia do post (widget Pai no sidebar)
+    const parentIdFromForm = getOptionalNumber(formData, "parent_id");
 
     // Extrair meta_values customizados
     const metaValues = getFieldsWithPrefix(formData, "meta_", true);
@@ -304,6 +315,10 @@ export async function POST({
     if (action === "edit" && postIdParam && parseNumericId(postIdParam)) {
       // EDIÇÃO
       postId = parseInt(postIdParam, 10);
+      const hierarchyParentId = await resolveHierarchyParentId(
+        parentIdFromForm,
+        postId,
+      );
 
       // Preparar payload de atualização
       const updatePayload = {
@@ -314,6 +329,7 @@ export async function POST({
         status,
         author_id,
         id_locale_code: localeId,
+        parent_id: hierarchyParentId,
         updated_at: now,
       };
 
@@ -390,6 +406,10 @@ export async function POST({
       }
     } else {
       // CRIAÇÃO
+      const hierarchyParentId = await resolveHierarchyParentId(
+        parentIdFromForm,
+        null,
+      );
       const finalMetaValues: Record<string, string> = { ...metaValues };
 
       // Adicionar post_thumbnail_id se existir
@@ -403,7 +423,7 @@ export async function POST({
 
       const createPayload = {
         post_type_id: postTypeId,
-        parent_id: parentId !== undefined ? parentId : null,
+        parent_id: hierarchyParentId,
         title,
         slug,
         excerpt: excerpt || null,

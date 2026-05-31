@@ -2,7 +2,7 @@
  * Service que carrega todos os dados necessários para a página de edição de conteúdo (content.astro).
  * Centraliza tipo de post, taxonomias, usuários, post em edição, thumbnail, custom fields e templates.
  */
-import { eq, and, inArray, or, isNull, sql } from "drizzle-orm";
+import { eq, and, inArray, or, isNull, sql, ne, notInArray } from "drizzle-orm";
 import {
   postTypes,
   posts,
@@ -40,8 +40,19 @@ export type ContentPagePost = {
   status: string | null;
   author_id: string | null;
   id_locale_code: number | null;
+  parent_id: number | null;
   meta_values: string | null;
 };
+
+/** Post candidato a pai no widget do sidebar. */
+export type ParentPostOption = {
+  id: number;
+  title: string;
+  slug: string;
+  post_type_slug: string;
+};
+
+const PARENT_CANDIDATE_EXCLUDED_TYPES = ["attachment", "custom_fields"] as const;
 
 export type CustomFieldRow = { id: number; name: string; value: string; type?: string };
 
@@ -70,6 +81,8 @@ export type ContentPageDataResult = {
   initialAuthorId: string;
   initialOrder: string;
   initialLocaleId: number | null;
+  initialParentId: number | null;
+  parentPostOptions: ParentPostOption[];
   asideAccordionName: string;
   thumbnailPath: string;
   thumbnailUrl: string;
@@ -198,7 +211,44 @@ export async function getContentPageData(params: {
     .from(userTable)
     .orderBy(userTable.name);
 
+  const parentTypeRows = await db
+    .select({ id: postTypes.id })
+    .from(postTypes)
+    .where(notInArray(postTypes.slug, [...PARENT_CANDIDATE_EXCLUDED_TYPES]));
+
+  const parentTypeIds = parentTypeRows.map((row) => row.id);
+  const excludePostId =
+    action === "edit" && idParam && /^\d+$/.test(idParam)
+      ? parseInt(idParam, 10)
+      : null;
+
+  const parentPostConditions = [
+    parentTypeIds.length > 0
+      ? inArray(posts.post_type_id, parentTypeIds)
+      : sql`1 = 0`,
+  ];
+  if (excludePostId != null && !Number.isNaN(excludePostId)) {
+    parentPostConditions.push(ne(posts.id, excludePostId));
+  }
+
+  const parentPostOptions: ParentPostOption[] =
+    parentTypeIds.length > 0
+      ? await db
+          .select({
+            id: posts.id,
+            title: posts.title,
+            slug: posts.slug,
+            post_type_slug: postTypes.slug,
+          })
+          .from(posts)
+          .innerJoin(postTypes, eq(posts.post_type_id, postTypes.id))
+          .where(and(...parentPostConditions))
+          .orderBy(posts.title)
+          .limit(500)
+      : [];
+
   let post: ContentPagePost | null = null;
+  let initialParentId: number | null = null;
   let selectedTermIds: number[] = [];
   let thumbnailPath = "";
   let thumbnailUrl = "";
@@ -218,12 +268,14 @@ export async function getContentPageData(params: {
         status: posts.status,
         author_id: posts.author_id,
         id_locale_code: posts.id_locale_code,
+        parent_id: posts.parent_id,
         meta_values: posts.meta_values,
       })
       .from(posts)
       .where(and(eq(posts.id, parseInt(idParam, 10)), eq(posts.post_type_id, typeId)))
       .limit(1);
     post = row ?? null;
+    initialParentId = post?.parent_id ?? null;
 
     if (!post) {
       return redirect(
@@ -436,6 +488,8 @@ export async function getContentPageData(params: {
     initialAuthorId,
     initialOrder,
     initialLocaleId: post?.id_locale_code ?? null,
+    initialParentId,
+    parentPostOptions,
     asideAccordionName: "content-aside",
     thumbnailPath: String(thumbnailPath),
     thumbnailUrl: String(thumbnailUrl),

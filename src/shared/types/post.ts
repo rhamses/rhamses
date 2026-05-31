@@ -53,6 +53,7 @@ export interface PostUpdatePayload {
   status?: PostStatus;
   author_id?: string | null;
   id_locale_code?: number | null;
+  parent_id?: number | null;
   meta_values?: string | null;
   updated_at: number;
 }
@@ -69,6 +70,7 @@ export interface PostFormData {
   slug: string;
   excerpt: string;
   body: string;
+  body_blocks: string;
   status: PostStatus;
   author_id: string | null;
   taxonomy_terms: number[];
