@@ -109,6 +109,7 @@ let post: {
   slug: string;
   excerpt: string | null;
   body: string | null;
+  body_blocks: string | null;
   status: string | null;
   author_id: string | null;
   id_locale_code: number | null;
@@ -262,8 +263,8 @@ const showAlternateTemplate =
       <input type="hidden" name="post_type" value={postTypeSlug} />
       <input type="hidden" name="action" value={action} />
       {
-        action === "edit" && post && (
-          <input type="hidden" name="id" value={post.id} />
+        action === "edit" && idParam && (
+          <input type="hidden" name="id" value={idParam} />
         )
       }
       <input type="hidden" name="locale" value={locale} />
@@ -293,8 +294,11 @@ const showAlternateTemplate =
           <div class="flex-1 content-editor-fullheight">
             <ContentEditor
               initialBody={post?.body ?? ""}
+              initialBodyBlocks={post?.body_blocks ?? ""}
               name="body"
               inputId="body"
+              blocksName="body_blocks"
+              blocksInputId="body_blocks"
               locale={locale}
             />
           </div>
