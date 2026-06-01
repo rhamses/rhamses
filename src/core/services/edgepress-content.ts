@@ -201,8 +201,11 @@ async function resolvePostLocaleFilter(
   if (localeIdParam != null && localeIdParam.trim() !== "" && /^\d+$/.test(localeIdParam)) {
     next["id_locale_code"] = localeIdParam;
   } else if (localeParam != null && localeParam.trim() !== "") {
-    const localeCode = localeParam.trim().toLowerCase().replace(/-/g, "_");
-    const [row] = await db.select({ id: locales.id }).from(locales).where(eq(locales.locale_code, localeCode)).limit(1);
+    const [row] = await db
+      .select({ id: locales.id })
+      .from(locales)
+      .where(eq(locales.locale_code, localeParam.trim()))
+      .limit(1);
     if (row != null) {
       next["id_locale_code"] = String(row.id);
     }

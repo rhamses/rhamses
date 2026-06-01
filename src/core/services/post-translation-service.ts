@@ -45,35 +45,15 @@ export async function resolveLocaleId(
   localeCode: string | null | undefined,
   database: Database = defaultDb,
 ): Promise<number | null> {
-  const trimmed = String(localeCode ?? "").trim();
-  if (!trimmed) return null;
+  const code = String(localeCode ?? "").trim();
+  if (!code) return null;
 
-  const normalized = trimmed.toLowerCase().replace(/-/g, "_");
-  const candidates = [
-    trimmed,
-    normalized,
-    normalized.replace(/_/g, "-"),
-    normalized === "pt_br" ? "pt-br" : null,
-    normalized === "en_us" ? "en" : null,
-    normalized === "es_es" ? "es" : null,
-  ].filter((c): c is string => Boolean(c));
-
-  for (const code of candidates) {
-    const [row] = await database
-      .select({ id: locales.id })
-      .from(locales)
-      .where(eq(locales.locale_code, code))
-      .limit(1);
-    if (row) return row.id;
-
-    const underscored = code.toLowerCase().replace(/-/g, "_");
-    const [row2] = await database
-      .select({ id: locales.id })
-      .from(locales)
-      .where(eq(locales.locale_code, underscored))
-      .limit(1);
-    if (row2) return row2.id;
-  }
+  const [row] = await database
+    .select({ id: locales.id })
+    .from(locales)
+    .where(eq(locales.locale_code, code))
+    .limit(1);
+  if (row) return row.id;
 
   return null;
 }
@@ -182,7 +162,14 @@ export async function findPostByTranslationKey(
     if (bySlug) return bySlug;
   }
 
-  // Sem locale: primeira publicação com a chave (fallback)
+  // Fallback de compatibilidade: slug direto sem locale (conteúdo legado sem translation_key).
+  const bySlugWithoutLocale = await fetchPostRow(
+    database,
+    and(eq(posts.slug, key), statusCond),
+  );
+  if (bySlugWithoutLocale) return bySlugWithoutLocale;
+
+  // Sem locale (ou sem correspondência no locale): primeira publicação com a chave.
   const any = await fetchPostRow(database, and(translationKeyMatch(key), statusCond));
   return any;
 }

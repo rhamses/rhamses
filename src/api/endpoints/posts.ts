@@ -77,6 +77,10 @@ import {
 } from "../../core/services/theme-service.ts";
 import { triggerThemeImportFromRuntime } from "../../core/services/theme-import-trigger.ts";
 import { syncSeoMetadataFromPostSave } from "../../core/services/seo-metadata-service.ts";
+import {
+  adminUrlLocaleToDbCode,
+  dbLocaleCodeToAdminUrl,
+} from "../../utils/admin-locale-constants.ts";
 
 // Auth
 import { requireMinRole, resolveAuthorIdForRole } from "../../utils/api-auth.ts";
@@ -86,6 +90,26 @@ import {
 } from "../../core/services/post-translation-service.ts";
 
 export const prerender = false;
+
+function normalizeLocaleForAdminUrl(rawLocale: string): string {
+  const value = String(rawLocale ?? "").trim();
+  if (value === "pt_BR" || value === "es_ES" || value === "en_US") {
+    return dbLocaleCodeToAdminUrl(value);
+  }
+  const lower = value.toLowerCase();
+  if (lower === "pt-br" || lower === "es" || lower === "en") {
+    return lower;
+  }
+  return "pt-br";
+}
+
+function normalizeLocaleForDbCode(rawLocale: string): string {
+  const value = String(rawLocale ?? "").trim();
+  if (value === "pt_BR" || value === "es_ES" || value === "en_US") {
+    return value;
+  }
+  return adminUrlLocaleToDbCode(value);
+}
 
 /** Normaliza parent_id de hierarquia (não confundir com parent_id de attachments). */
 async function resolveHierarchyParentId(
@@ -146,6 +170,8 @@ export async function POST({
     const action = getString(formData, "action");
     const postIdParam = getString(formData, "id") || null;
     const locale = getString(formData, "locale", "pt-br");
+    const adminLocale = normalizeLocaleForAdminUrl(locale);
+    const dbLocaleCodeFromLocale = normalizeLocaleForDbCode(locale);
     const title = getString(formData, "title");
     const slug = getString(formData, "slug");
     const excerpt = getString(formData, "excerpt", "");
@@ -261,27 +287,13 @@ export async function POST({
     // Extrair id_locale_code do formulário (se selecionado no dropdown)
     let localeId: number | null = getNumber(formData, "id_locale_code", null);
     if (localeId === null) {
-      // Fallback: usar locale da URL se não houver id_locale_code no formulário
-      const LOCALE_MAP: Record<string, string> = {
-        en: "en_US",
-        "en-US": "en_US",
-        en_US: "en_US",
-        es: "es_ES",
-        "es-ES": "es_ES",
-        es_ES: "es_ES",
-        "pt-br": "pt_BR",
-        pt_BR: "pt_BR",
-        "pt-BR": "pt_BR",
-      };
-      const normalizedLocale = locale.toLowerCase().replace(/-/g, "_");
-      const dbLocaleCode =
-        LOCALE_MAP[normalizedLocale] || LOCALE_MAP[locale] || locale;
-
+      // Fallback: usar locale do formulário (normalizado para locale_code) quando
+      // id_locale_code não vier explícito no payload.
       try {
         const [localeRow] = await db
           .select({ id: locales.id })
           .from(locales)
-          .where(eq(locales.locale_code, dbLocaleCode))
+          .where(eq(locales.locale_code, dbLocaleCodeFromLocale))
           .limit(1);
         localeId = localeRow?.id ?? null;
       } catch {
@@ -292,12 +304,12 @@ export async function POST({
 
     // Validar campos obrigatórios
     if (!post_type || !title || !slug) {
-      const msg = getErrorMessage("MISSING_REQUIRED_FIELDS", locale);
+      const msg = getErrorMessage("MISSING_REQUIRED_FIELDS", adminLocale);
       if (isHtmx) return badRequestHtmlResponse(msg);
       const redirectUrl = buildAbsoluteUrl(
         request,
         buildContentUrl(
-          locale,
+          adminLocale,
           post_type || "post",
           action,
           postIdParam || undefined,
@@ -309,15 +321,22 @@ export async function POST({
     // Validar formulário
     const validation = validatePostForm(formData);
     if (!validation.valid) {
-      const msg = getErrorMessage("MISSING_REQUIRED_FIELDS", locale);
+      const msg = getErrorMessage("MISSING_REQUIRED_FIELDS", adminLocale);
       if (isHtmx) return badRequestHtmlResponse(msg);
       return badRequestResponse(msg, validation.errors);
+    }
+
+    // Segurança: edição sem ID válido nunca deve cair em criação.
+    if (action === "edit" && (!postIdParam || !parseNumericId(postIdParam))) {
+      const msg = "ID inválido para edição";
+      if (isHtmx) return badRequestHtmlResponse(msg);
+      return badRequestResponse(msg, { id: msg });
     }
 
     // Buscar ID do post_type
     const postTypeId = await getPostTypeId(db, post_type);
     if (!postTypeId) {
-      const listUrl = buildAbsoluteUrl(request, buildListUrl(locale, "post"));
+      const listUrl = buildAbsoluteUrl(request, buildListUrl(adminLocale, "post"));
       if (isHtmx) return htmxRedirectResponse(listUrl);
       return redirectResponse(listUrl);
     }
@@ -660,7 +679,7 @@ export async function POST({
     }
 
     // Retornar resposta
-    const listUrl = buildAbsoluteUrl(request, buildListUrl(locale, post_type));
+    const listUrl = buildAbsoluteUrl(request, buildListUrl(adminLocale, post_type));
     const acceptsJson = request.headers
       .get("Accept")
       ?.includes("application/json");

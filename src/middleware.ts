@@ -18,14 +18,79 @@ import { getKvFromLocals } from "./utils/runtime-locals.ts";
 const sensitiveAPIPaths = ["/api/posts", "/api/upload", "/api/media"];
 const setupPath = `/setup/${defaultLocale}`;
 const FALLBACK_THEME_SLUG = "2026";
+const DEFAULT_PUBLIC_THEME_LOCALE = "pt_BR";
+const DEFAULT_ADMIN_LOCALE = "pt-br";
+
+function normalizePublicThemeLocale(
+  rawLocale: string | null | undefined,
+): "pt_BR" | "en_US" | "es_ES" | null {
+  const value = String(rawLocale ?? "").trim();
+  if (!value) return null;
+  const lower = value.toLowerCase();
+  if (value === "pt_BR" || lower === "pt-br" || lower === "pt_br" || lower === "pt") {
+    return "pt_BR";
+  }
+  if (value === "en_US" || lower === "en-us" || lower === "en_us" || lower === "en") {
+    return "en_US";
+  }
+  if (value === "es_ES" || lower === "es-es" || lower === "es_es" || lower === "es") {
+    return "es_ES";
+  }
+  return null;
+}
+
+function normalizeAdminUrlLocale(
+  rawLocale: string | null | undefined,
+): "pt-br" | "es" | "en" | null {
+  const value = String(rawLocale ?? "").trim();
+  if (!value) return null;
+  const lower = value.toLowerCase();
+  if (value === "pt_BR" || lower === "pt_br" || lower === "pt-br" || lower === "pt") {
+    return "pt-br";
+  }
+  if (value === "es_ES" || lower === "es_es" || lower === "es-es" || lower === "es") {
+    return "es";
+  }
+  if (value === "en_US" || lower === "en_us" || lower === "en-us" || lower === "en") {
+    return "en";
+  }
+  return null;
+}
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const pathname = new URL(context.request.url).pathname;
   const method = context.request.method.toUpperCase();
+  const themeRootMatch = pathname.match(/^\/themes\/([^/]+)\/?$/);
+  const adminLocaleMatch = pathname.match(/^\/admin\/([^/]+)(\/.*)?$/);
 
   const isApi = pathname.startsWith("/api");
   const isAuthApi = pathname.startsWith("/api/auth");
   const isSetupApi = pathname === "/api/setup";
+
+  // Admin aceita apenas locale de URL (pt-br|es|en).
+  // Ex.: /admin/pt_BR/list -> /admin/pt-br/list
+  if (adminLocaleMatch) {
+    const [, rawLocale, suffix = ""] = adminLocaleMatch;
+    const normalizedAdminLocale = normalizeAdminUrlLocale(rawLocale);
+    if (normalizedAdminLocale && rawLocale !== normalizedAdminLocale) {
+      return context.redirect(
+        `/admin/${normalizedAdminLocale}${suffix}${context.url.search}`,
+        303,
+      );
+    }
+    if (!normalizedAdminLocale) {
+      return context.redirect(
+        `/admin/${DEFAULT_ADMIN_LOCALE}${suffix}${context.url.search}`,
+        303,
+      );
+    }
+  }
+
+  // /themes/{slug} sem locale é reescrito internamente para o locale padrão.
+  // Ex.: /themes/2026 -> /themes/2026/pt_BR
+  if (themeRootMatch) {
+    return next(`/themes/${themeRootMatch[1]}/${DEFAULT_PUBLIC_THEME_LOCALE}`);
+  }
 
   // Permitir APIs de auth e setup mesmo quando setup não está completo
   if (isAuthApi || isSetupApi) {
@@ -107,7 +172,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
       outPath = outPath.replace(/\/+$/, "");
     }
     const targetPath =
-      outPath === "/" ? `/themes/${activeSlug}` : `/themes/${activeSlug}${outPath}`;
+      outPath === "/"
+        ? `/themes/${activeSlug}/${DEFAULT_PUBLIC_THEME_LOCALE}`
+        : `/themes/${activeSlug}${outPath}`;
     // next(path) em vez de context.rewrite(Request): evita SpanParent / I/O cross-request no workerd dev.
     return next(`${targetPath}${context.url.search}`);
   }
@@ -162,11 +229,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Pré-carregar traduções (DB + fallback JSON) para rotas com locale,
   // suportando tanto /{locale}/... (site público) quanto /admin/{locale}/... (admin).
   if (!isApi) {
-    const publicMatch = pathname.match(/^\/(en|es|pt-br)(\/|$)/);
-    const adminMatch = pathname.match(/^\/admin\/(en|es|pt-br)(\/|$)/);
+    const publicMatch = pathname.match(/^\/([^/]+)(\/|$)/);
+    const adminMatch = pathname.match(/^\/admin\/([^/]+)(\/|$)/);
+    const themeMatch = pathname.match(/^\/themes\/[^/]+\/([^/]+)(\/|$)/);
     const localeToLoad =
-      (publicMatch && (publicMatch[1] as "en" | "es" | "pt-br")) ||
-      (adminMatch && (adminMatch[1] as "en" | "es" | "pt-br"));
+      (publicMatch && normalizePublicThemeLocale(publicMatch[1])) ||
+      (adminMatch && normalizePublicThemeLocale(adminMatch[1])) ||
+      (themeMatch && normalizePublicThemeLocale(themeMatch[1]));
 
     if (localeToLoad) {
       await ensureTranslationsLoaded(localeToLoad);
