@@ -2,10 +2,8 @@
 import BaseHead from "../../../../components/themes/baseHead.astro";
 import Header from "../parts/header.astro";
 import BaseBody from "../../../../components/themes/baseBody.astro";
-import PostList from "../../../../components/themes/postList.astro";
 import "../../../../assets/app.css";
 import "../theme.css";
-
 const locale = String(Astro.params["locale"] ?? "").trim();
 const htmlLang = locale.startsWith("pt")
   ? "pt-BR"
