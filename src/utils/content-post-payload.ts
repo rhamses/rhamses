@@ -26,6 +26,7 @@ export type PostRow = {
   slug: string;
   excerpt: string | null;
   body: string | null;
+  body_blocks: string | null;
   status: string;
   meta_values: string | null;
   published_at: number | null;
@@ -142,6 +143,7 @@ export async function buildContentPostPayload(
   slug: string;
   excerpt: string | null;
   body: string | null;
+  body_blocks: string | null;
   status: string;
   published_at: number | null;
   created_at: number | null;
@@ -212,6 +214,7 @@ export async function buildContentPostPayload(
     slug: post.slug,
     excerpt: post.excerpt,
     body: post.body,
+    body_blocks: post.body_blocks,
     status: post.status,
     published_at: post.published_at,
     created_at: post.created_at,

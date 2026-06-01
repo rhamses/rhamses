@@ -16,6 +16,7 @@ export interface Post {
   slug: string;
   excerpt: string | null;
   body: string | null;
+  body_blocks: string | null;
   status: PostStatus;
   author_id: string | null;
   id_locale_code: number | null;
@@ -34,6 +35,7 @@ export interface PostCreatePayload {
   slug: string;
   excerpt?: string | null;
   body?: string | null;
+  body_blocks?: string | null;
   status: PostStatus;
   author_id?: string | null;
   id_locale_code?: number | null;
@@ -50,6 +52,7 @@ export interface PostUpdatePayload {
   slug?: string;
   excerpt?: string | null;
   body?: string | null;
+  body_blocks?: string | null;
   status?: PostStatus;
   author_id?: string | null;
   id_locale_code?: number | null;

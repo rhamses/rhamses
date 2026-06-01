@@ -22,6 +22,7 @@ export interface PostFormData {
   slug: string;
   excerpt: string;
   body: string;
+  body_blocks: string;
   status: typeof POST_STATUSES[number];
   author_id: string | null;
   taxonomy_terms: number[];
@@ -115,6 +116,7 @@ export function normalizePostFormData(formData: FormData): Partial<PostFormData>
   const slug = getString(formData, 'slug');
   const excerpt = getString(formData, 'excerpt', '');
   const body = getString(formData, 'body', '');
+  const body_blocks = getString(formData, 'body_blocks', '');
   const status = normalizePostStatus(getString(formData, 'status'));
   const authorIdRaw = getString(formData, 'author_id');
   const author_id = authorIdRaw === '' ? null : authorIdRaw;
@@ -128,6 +130,7 @@ export function normalizePostFormData(formData: FormData): Partial<PostFormData>
     slug,
     excerpt,
     body,
+    body_blocks,
     status,
     author_id,
   };

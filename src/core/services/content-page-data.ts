@@ -37,6 +37,7 @@ export type ContentPagePost = {
   slug: string;
   excerpt: string | null;
   body: string | null;
+  body_blocks: string | null;
   status: string | null;
   author_id: string | null;
   id_locale_code: number | null;
@@ -272,6 +273,7 @@ export async function getContentPageData(params: {
         slug: posts.slug,
         excerpt: posts.excerpt,
         body: posts.body,
+        body_blocks: posts.body_blocks,
         status: posts.status,
         author_id: posts.author_id,
         id_locale_code: posts.id_locale_code,

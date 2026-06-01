@@ -50,6 +50,7 @@ async function loadPostNode(
       slug: posts.slug,
       excerpt: posts.excerpt,
       body: posts.body,
+      body_blocks: posts.body_blocks,
       status: posts.status,
       meta_values: posts.meta_values,
       published_at: posts.published_at,
