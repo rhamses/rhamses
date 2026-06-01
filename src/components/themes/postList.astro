@@ -28,6 +28,8 @@ type Props = {
   order?: "asc" | "desc";
   status?: "published" | "draft" | "archived" | (string & {});
   className?: string;
+  /** "card" mantém layout antigo; "starter" aplica layout horizontal inspirado no screenshot */
+  variant?: "card" | "starter";
   required?: boolean;
 };
 
@@ -38,6 +40,7 @@ const {
   order = "desc",
   status = "published",
   className,
+  variant = "card",
   required = true,
 } = Astro.props as Props;
 
@@ -127,7 +130,50 @@ function formatPostDate(ts: number | string | null | undefined): { label: string
 }
 ---
 
-<ul class={`grid gap-6 sm:grid-cols-2 lg:grid-cols-3 ${className ?? ""}`}>
+{
+variant === "starter" ? (
+  <ul class={`divide-y divide-slate-200 ${className ?? ""}`}>
+    {
+      posts.map((post) => {
+        const title = String(post.title ?? "").trim();
+        const slug = String(post.slug ?? "").trim();
+        const href = slug ? buildPublicPostPath(slug) : "#";
+        const excerpt = stripHtml(String(post.excerpt ?? "")).trim();
+        const date = formatPostDate(post.published_at ?? post.created_at);
+        const badge = String(postType ?? "post").replaceAll("_", "-").toUpperCase();
+
+        return (
+          <li class="grid gap-5 py-8 md:grid-cols-[190px_1fr] md:gap-8">
+            <div class="text-sm font-semibold tracking-tight text-slate-400">
+              {date ? (
+                <time datetime={date.iso}>{date.label}</time>
+              ) : (
+                <span>Sem data</span>
+              )}
+            </div>
+            <article class="space-y-4">
+              <div class="flex flex-wrap gap-3">
+                <span class="text-xs font-bold uppercase tracking-[0.14em] text-fuchsia-500">{badge}</span>
+              </div>
+              <h3 class="text-2xl font-bold tracking-tight text-slate-900">
+                <a href={href} class="hover:text-fuchsia-600 transition-colors">
+                  {title}
+                </a>
+              </h3>
+              {excerpt ? (
+                <p class="max-w-3xl text-lg leading-relaxed text-slate-500">{excerpt}</p>
+              ) : null}
+              <a href={href} class="inline-flex items-center text-lg font-semibold text-fuchsia-500 hover:text-fuchsia-600">
+                Read more <span aria-hidden="true" class="ml-1">→</span>
+              </a>
+            </article>
+          </li>
+        );
+      })
+    }
+  </ul>
+) : (
+  <ul class={`grid gap-6 sm:grid-cols-2 lg:grid-cols-3 ${className ?? ""}`}>
   {
     posts.map((post) => {
       const title = String(post.title ?? "").trim();
@@ -169,4 +215,6 @@ function formatPostDate(ts: number | string | null | undefined): { label: string
       );
     })
   }
-</ul>
+  </ul>
+)
+}
