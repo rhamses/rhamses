@@ -3,9 +3,13 @@ export const DATA_LIST_PAGE_LENGTH_OPTIONS = [10, 20, 50, 100] as const;
 /** Limite ao carregar listas inteiras para DataTables no cliente (como post_types). */
 export const DATA_LIST_CLIENT_FETCH_LIMIT = 5000;
 
+/** Aceita opções padrão (10/20/50/100) ou valor customizado das settings (ex.: datalist_pagination). */
 export function normalizeDataListPageLength(value: number): number {
-  const allowed = DATA_LIST_PAGE_LENGTH_OPTIONS as readonly number[];
-  return allowed.includes(value) ? value : 10;
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n < 1) return 10;
+  if (n > 5000) return 5000;
+  if ((DATA_LIST_PAGE_LENGTH_OPTIONS as readonly number[]).includes(n)) return n;
+  return n;
 }
 
 const LIMIT_URL_SENTINEL = 9_999_999;
@@ -14,9 +18,18 @@ export function toLimitUrlTemplate(buildLimitUrl: (limit: number) => string): st
   return buildLimitUrl(LIMIT_URL_SENTINEL).replace(String(LIMIT_URL_SENTINEL), "__LIMIT__");
 }
 
+export interface DataListServerFetchConfig {
+  url: string;
+  context: Record<string, unknown>;
+  total: number;
+  page: number;
+}
+
 export interface DataListTableConfig {
   emptyMessage: string;
   serverPagination: boolean;
+  /** Busca páginas via POST sem recarregar a página inteira. */
+  serverFetch?: DataListServerFetchConfig;
   /** Ordenação feita no servidor (DataTables sincroniza via URL). */
   serverBackedOrder: boolean;
   selectable: boolean;

@@ -7,8 +7,10 @@ import DataListActions from "./DataListActions.astro";
 import {
   normalizeDataListPageLength,
   toLimitUrlTemplate,
+  type DataListServerFetchConfig,
   type DataListTableConfig,
 } from "./data-list-page-length.ts";
+import type { DataListActionTemplates } from "./data-list-server-fetch.ts";
 import {
   buildDataTableInitialOrder,
   toOrderUrlTemplate,
@@ -95,6 +97,9 @@ interface Props {
     entries: DataListOrderEntry[];
     buildOrderUrl: (order: string, orderDir: string) => string;
   };
+  /** Paginação via POST (/api/admin/list) sem recarregar a página. */
+  serverFetch?: DataListServerFetchConfig;
+  actionTemplatesForFetch?: DataListActionTemplates;
 }
 
 const {
@@ -128,6 +133,8 @@ const {
   dtPaginatePrevious = "Anterior",
   dtPaginateNext = "Próxima",
   serverOrder,
+  serverFetch,
+  actionTemplatesForFetch,
   emptyColspan: emptyColspanProp,
 } = Astro.props;
 
@@ -149,8 +156,9 @@ const resolvedPageLength = normalizeDataListPageLength(
 
 const dtConfig: DataListTableConfig = {
   emptyMessage,
-  serverPagination: Boolean(pagination),
+  serverPagination: Boolean(pagination) && !serverFetch,
   serverBackedOrder,
+  ...(serverFetch ? { serverFetch } : {}),
   selectable,
   hasActions: Boolean(actionConfig),
   dataColumnCount: displayColumns.length,
@@ -195,12 +203,18 @@ function expandTemplate(
 }
 ---
 
-<div class="data-list-wrapper overflow-x-auto">
+<div
+  class="data-list-wrapper overflow-x-auto"
+  {...(actionTemplatesForFetch
+    ? { "data-action-templates": JSON.stringify(actionTemplatesForFetch) }
+    : {})}
+>
   <table
     id={tableId}
     class="display w-full"
     data-dt-config={JSON.stringify(dtConfig)}
     data-display-column-keys={displayColumnKeys.join("|")}
+    data-link-column-key={linkColumnKey}
   >
     <thead>
       <tr>

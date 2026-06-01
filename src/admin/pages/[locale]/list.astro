@@ -2,16 +2,18 @@
 import AdminLayout from "../../../admin/layouts/AdminLayout.astro";
 import DataList from "../../../admin/components/DataList.astro";
 import { db } from "../../../db/index.ts";
-import { getListItems } from "../../../utils/list-items.ts";
 import { getMenuItems } from "../../../utils/menu.ts";
-import { getTableList, TABLE_DELETE_TEMPLATE } from "../../../utils/list-table-dynamic.ts";
+import { TABLE_DELETE_TEMPLATE } from "../../../utils/list-table-dynamic.ts";
 import { t, locales, defaultLocale } from "../../../i18n/index.ts";
 import { getSourceKind } from "../../../utils/content-source.ts";
 import { ensureTranslationsLoaded } from "../../../utils/i18n-helpers.ts";
 import { formatColumnLabel } from "../../../utils/list-utils.ts";
-import { DATA_LIST_CLIENT_FETCH_LIMIT } from "../../../admin/components/data-list-page-length.ts";
+import { normalizeDataListPageLength } from "../../../admin/components/data-list-page-length.ts";
+import { parseDataListOrderParams } from "../../../admin/components/data-list-order.ts";
+import { getAdminListPage } from "../../../core/services/admin-list-page.ts";
 import { settings } from "../../../db/schema.ts";
 import { eq } from "drizzle-orm";
+import type { DataListActionTemplates } from "../../../admin/components/data-list-server-fetch.ts";
 
 const locale = Astro.params["locale"] ?? defaultLocale;
 if (!locales.includes(locale as "en" | "es" | "pt-br")) {
@@ -58,15 +60,34 @@ try {
 
 const type = Astro.url.searchParams.get("type") ?? "post";
 const status = Astro.url.searchParams.get("status") ?? undefined;
+const page = Math.max(1, parseInt(Astro.url.searchParams.get("page") ?? "1", 10) || 1);
+/** Tamanho da página vem da setting `datalist_pagination` (não do `limit=10` fixo nos links do menu). */
+const listLimit = normalizeDataListPageLength(datalistPageLength);
+const orders = parseDataListOrderParams(
+  Astro.url.searchParams.get("order"),
+  Astro.url.searchParams.get("orderDir"),
+);
 
 const sourceKind = await getSourceKind(db, type);
 const loadFromTable = sourceKind === "table";
 
-function formatDate(ts: number | null) {
-  if (ts == null) return "—";
-  const loc = locale === "pt-br" ? "pt-BR" : locale === "es" ? "es" : "en";
-  return new Date(ts).toLocaleString(loc);
-}
+const authorId =
+  isAuthorRole(roleId) && (currentUser as { id?: string })?.id
+    ? (currentUser as { id: string }).id
+    : undefined;
+
+const listPage = await getAdminListPage(
+  db,
+  {
+    type,
+    page,
+    limit: listLimit,
+    orders,
+    ...(status !== undefined && status !== "" ? { status } : {}),
+    ...(authorId ? { authorId } : {}),
+  },
+  locale,
+);
 
 let listColumns: { key: string; label: string; sortable?: boolean }[];
 let listItems: Record<string, unknown>[];
@@ -74,42 +95,12 @@ let listEmptyColspan: number;
 let deletePathTemplate: string;
 
 if (loadFromTable) {
-  const tableResult = await getTableList(db, type, {
-    limit: DATA_LIST_CLIENT_FETCH_LIMIT,
-    page: 1,
-  });
-
-  listColumns = tableResult.columns.map((col) => ({
-    key: col,
-    label: formatColumnLabel(col),
+  listColumns = listPage.columns.map((col) => ({
+    key: col.key,
+    label: formatColumnLabel(col.key),
   }));
-
-  listItems = tableResult.items.map((i) => {
-    const formatted: Record<string, unknown> = { ...i };
-    for (const key of Object.keys(formatted)) {
-      if (key.endsWith("_at") || key.endsWith("At") || key === "expires_at") {
-        const val = formatted[key];
-        if (typeof val === "number") {
-          formatted[key] = formatDate(val);
-        }
-      }
-    }
-    return formatted;
-  });
-
-  listEmptyColspan = listColumns.length + 1;
   deletePathTemplate = TABLE_DELETE_TEMPLATE[type] || "";
 } else {
-  const listResult = await getListItems(db, {
-    type,
-    ...(status !== undefined && status !== "" ? { status } : {}),
-    limit: DATA_LIST_CLIENT_FETCH_LIMIT,
-    page: 1,
-    ...(isAuthorRole(roleId) && (currentUser as { id?: string })?.id
-      ? { authorId: (currentUser as { id: string }).id }
-      : {}),
-  });
-
   listColumns = [
     { key: "title", label: t(locale, "admin.list.titleColumn") },
     { key: "language", label: t(locale, "admin.list.language"), sortable: false },
@@ -121,20 +112,11 @@ if (loadFromTable) {
     { key: "created_at", label: t(locale, "admin.list.createdAt") },
     { key: "updated_at", label: t(locale, "admin.list.updatedAt") },
   ];
-  listItems = listResult.items.map((i) => ({
-    ...i,
-    language: (i as { language?: string })["language"] || "—",
-    order: (i as { order?: string })["order"] || "—",
-    categories: (i as { categories?: string })["categories"] || "—",
-    tags: (i as { tags?: string })["tags"] || "—",
-    author: (i as { author?: string })["author"] || "—",
-    status: (i as { status?: string })["status"] ?? "—",
-    created_at: formatDate((i as { created_at?: number })["created_at"] ?? null),
-    updated_at: formatDate((i as { updated_at?: number })["updated_at"] ?? null),
-  }));
-  listEmptyColspan = listColumns.length + 1;
   deletePathTemplate = "/api/posts/{id}";
 }
+
+listItems = listPage.items;
+listEmptyColspan = listColumns.length + 1;
 
 const TRANSLATION_ACTION_EXCLUDED_TYPES = new Set([
   "attachment",
@@ -148,6 +130,46 @@ const showAddTranslationAction =
 const addTranslationPathTemplate = showAddTranslationAction
   ? `/api/posts/{id}/duplicate-translation?admin_locale=${locale}`
   : undefined;
+
+const editLinkTemplate = loadFromTable
+  ? `/admin/${locale}/content?post_type=${type}&action=edit&id={id}`
+  : `/admin/${locale}/content?post_type=${type}&action=edit&id={id}`;
+
+const actionConfigBase = {
+  editLinkTemplate,
+  deleteConfirm: t(locale, "admin.list.deleteConfirm"),
+  duplicatePathTemplate: `/api/posts/{id}/duplicate`,
+  ...(addTranslationPathTemplate ? { addTranslationPathTemplate } : {}),
+};
+
+const actionConfig = userCanDelete && deletePathTemplate
+  ? { ...actionConfigBase, deletePathTemplate }
+  : actionConfigBase;
+
+const actionTemplatesForFetch: DataListActionTemplates = {
+  editLinkTemplate: actionConfig.editLinkTemplate,
+  deleteConfirm: actionConfig.deleteConfirm,
+  duplicatePathTemplate: actionConfig.duplicatePathTemplate,
+  addTranslationPathTemplate: actionConfig.addTranslationPathTemplate,
+  editLabel: t(locale, "admin.list.edit"),
+  deleteLabel: t(locale, "admin.list.delete"),
+  addTranslationLabel: t(locale, "admin.list.addTranslation"),
+  actionsLabel: t(locale, "admin.list.actions"),
+  ...(userCanDelete && deletePathTemplate
+    ? { deletePathTemplate }
+    : {}),
+};
+
+const serverFetch = {
+  url: "/api/admin/list",
+  total: listPage.total,
+  page: listPage.page,
+  context: {
+    type,
+    locale,
+    ...(status !== undefined && status !== "" ? { status } : {}),
+  },
+};
 ---
 
 <AdminLayout title={t(locale, "admin.list.title")} locale={locale} menuItems={menuItems} user={layoutUser}>
@@ -158,7 +180,9 @@ const addTranslationPathTemplate = showAddTranslationAction
       items={listItems}
       emptyMessage={t(locale, "admin.list.noItems")}
       emptyColspan={listEmptyColspan}
-      pageLength={datalistPageLength}
+      pageLength={listLimit}
+      serverFetch={serverFetch}
+      actionTemplatesForFetch={actionTemplatesForFetch}
       actionsColumnLabel={t(locale, "admin.list.actions")}
       editLabel={t(locale, "admin.list.edit")}
       deleteLabel={t(locale, "admin.list.delete")}
@@ -170,34 +194,17 @@ const addTranslationPathTemplate = showAddTranslationAction
       dtZeroRecords={t(locale, "admin.list.dtZeroRecords")}
       dtPaginatePrevious={t(locale, "admin.list.previous")}
       dtPaginateNext={t(locale, "admin.list.next")}
-        {...(userCanDelete && deletePathTemplate
+        {...(actionConfig
           ? {
               actionConfig: {
-                editLinkTemplate: `/admin/${locale}/content?post_type=${type}&action=edit&id={id}`,
-                deletePathTemplate,
-                deleteConfirm: t(locale, "admin.list.deleteConfirm"),
-                duplicatePathTemplate: `/api/posts/{id}/duplicate`,
-                ...(addTranslationPathTemplate
-                  ? { addTranslationPathTemplate }
-                  : {}),
+                ...actionConfig,
+                editLinkTemplate: actionConfig.editLinkTemplate,
               },
               ...(addTranslationPathTemplate
                 ? { addTranslationLabel: t(locale, "admin.list.addTranslation") }
                 : {}),
             }
-          : {
-              actionConfig: {
-                editLinkTemplate: `/admin/${locale}/content?post_type=${type}&action=edit&id={id}`,
-                duplicatePathTemplate: `/api/posts/{id}/duplicate`,
-                ...(addTranslationPathTemplate
-                  ? { addTranslationPathTemplate }
-                  : {}),
-                deleteConfirm: t(locale, "admin.list.deleteConfirm"),
-              },
-              ...(addTranslationPathTemplate
-                ? { addTranslationLabel: t(locale, "admin.list.addTranslation") }
-                : {}),
-            })}
+          : {})}
       />
     </div>
   </div>
