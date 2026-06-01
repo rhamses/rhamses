@@ -19,6 +19,46 @@ export const CAPABILITY = {
   MENU_FULL: "menu.full",
 } as const;
 
+function fallbackCapabilitiesByRole(roleId: number): Set<string> {
+  if (roleId === 0) {
+    return new Set([
+      "*",
+      CAPABILITY.DASHBOARD,
+      CAPABILITY.CONTENT,
+      CAPABILITY.LIST,
+      CAPABILITY.SETTINGS,
+      CAPABILITY.MEDIA,
+      CAPABILITY.DELETE,
+      CAPABILITY.MENU_FULL,
+    ]);
+  }
+
+  // editor
+  if (roleId === 1) {
+    return new Set([
+      CAPABILITY.DASHBOARD,
+      CAPABILITY.CONTENT,
+      CAPABILITY.LIST,
+      CAPABILITY.MEDIA,
+      CAPABILITY.DELETE,
+      CAPABILITY.MENU_FULL,
+    ]);
+  }
+
+  // autor
+  if (roleId === 2) {
+    return new Set([
+      CAPABILITY.DASHBOARD,
+      CAPABILITY.CONTENT,
+      CAPABILITY.LIST,
+      CAPABILITY.MENU_FULL,
+    ]);
+  }
+
+  // leitor (default)
+  return new Set([CAPABILITY.DASHBOARD]);
+}
+
 /** Normaliza role do usuário (undefined/null -> 3 leitor). */
 export function normalizeRole(role: number | undefined | null): UserRoleId {
   const n = Number(role);
@@ -35,8 +75,7 @@ export function canSync(capabilities: Set<string>, capability: string): boolean 
 
 /**
  * Retorna todas as capacidades do perfil a partir da tabela role_capability.
- * Em caso de falha (ex.: D1 sem seed, tabela vazia), retorna fallback seguro:
- * role 0 (admin) = todas; outros = vazio (acesso negado).
+ * Em caso de falha (ex.: D1 sem seed, tabela vazia), aplica fallback por perfil.
  */
 export async function getCapabilities(
   db: Database,
@@ -47,35 +86,19 @@ export async function getCapabilities(
       .select({ capability: roleCapability.capability })
       .from(roleCapability)
       .where(eq(roleCapability.roleId, roleId));
+
+    if (rows.length === 0) {
+      return fallbackCapabilitiesByRole(roleId);
+    }
+
     const set = new Set(rows.map((r) => r.capability));
     if (set.has("*")) {
-      return new Set([
-        "*",
-        CAPABILITY.DASHBOARD,
-        CAPABILITY.CONTENT,
-        CAPABILITY.LIST,
-        CAPABILITY.SETTINGS,
-        CAPABILITY.MEDIA,
-        CAPABILITY.DELETE,
-        CAPABILITY.MENU_FULL,
-      ]);
+      return fallbackCapabilitiesByRole(0);
     }
     return set;
   } catch {
-    // Tabela role_capability inexistente/vazia ou falha no D1 (ex.: após deploy sem seed)
-    if (roleId === 0) {
-      return new Set([
-        "*",
-        CAPABILITY.DASHBOARD,
-        CAPABILITY.CONTENT,
-        CAPABILITY.LIST,
-        CAPABILITY.SETTINGS,
-        CAPABILITY.MEDIA,
-        CAPABILITY.DELETE,
-        CAPABILITY.MENU_FULL,
-      ]);
-    }
-    return new Set();
+    // Tabela role_capability inexistente ou falha no D1.
+    return fallbackCapabilitiesByRole(roleId);
   }
 }
 
