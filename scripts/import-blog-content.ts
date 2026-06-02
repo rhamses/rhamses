@@ -3,9 +3,10 @@ import { extname, join } from "node:path";
 import { createClient } from "@libsql/client/node";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
-import { marked } from "marked";
 import * as schema from "../src/db/schema.ts";
 import { ensurePostTypesFromDefaults } from "../src/db/seed.ts";
+import { markdownToHighlightedHtml } from "../src/utils/shiki-blog-highlight.ts";
+import { rewriteLegacyAssetUrls } from "./import-blog-assets.ts";
 
 const WRANGLER_STATE = join(process.cwd(), ".wrangler", "state", "v3", "d1");
 const SOURCE_CONTENT_DIR = "/Users/rhamses/Sites/rhams.es/blog/src/data/blog-posts";
@@ -94,6 +95,38 @@ async function main(): Promise<void> {
       .limit(1);
 
     const localeId = ptBrLocale?.id ?? null;
+
+    const pageTypeId = typeIds["page"];
+    let blogParentId: number | null = null;
+    if (pageTypeId) {
+      const [existingHub] = await db
+        .select({ id: schema.posts.id })
+        .from(schema.posts)
+        .where(and(eq(schema.posts.post_type_id, pageTypeId), eq(schema.posts.slug, "blog")))
+        .limit(1);
+
+      if (existingHub) {
+        blogParentId = existingHub.id;
+      } else {
+        const now = Date.now();
+        const [insertedHub] = await db
+          .insert(schema.posts)
+          .values({
+            post_type_id: pageTypeId,
+            title: "Blog",
+            slug: "blog",
+            status: "published",
+            meta_values: JSON.stringify({ import_source: "rhams.es/blog" }),
+            id_locale_code: localeId,
+            published_at: now,
+            created_at: now,
+            updated_at: now,
+          })
+          .returning({ id: schema.posts.id });
+        blogParentId = insertedHub?.id ?? null;
+      }
+    }
+
     let importedCount = 0;
     let updatedCount = 0;
 
@@ -107,7 +140,8 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const bodyHtml = await marked.parse(parsed.body);
+      const bodyMarkdown = rewriteLegacyAssetUrls(parsed.body);
+      const bodyHtml = await markdownToHighlightedHtml(bodyMarkdown);
       const publishedAt = Number.isNaN(Date.parse(parsed.frontmatter.publishDate))
         ? Date.now()
         : Date.parse(parsed.frontmatter.publishDate);
@@ -134,6 +168,7 @@ async function main(): Promise<void> {
             status: "published",
             meta_values: metaValues,
             id_locale_code: localeId,
+            parent_id: blogParentId,
             published_at: publishedAt,
             updated_at: now,
           })
@@ -142,6 +177,7 @@ async function main(): Promise<void> {
       } else {
         await db.insert(schema.posts).values({
           post_type_id: postTypeId,
+          parent_id: blogParentId,
           title: parsed.frontmatter.title,
           slug,
           excerpt: parsed.frontmatter.description,

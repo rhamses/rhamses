@@ -1,5 +1,6 @@
 ---
 import { themeContentGateway } from "../../../../core/services/theme-content-gateway.ts";
+import { highlightPlainCodeInHtml } from "../../../../utils/shiki-blog-highlight.ts";
 import "../theme.css";
 
 type ThemePost = {
@@ -9,11 +10,21 @@ type ThemePost = {
   excerpt?: string | null;
   body?: string | null;
   status?: string | null;
+  parent_id?: number | null;
   published_at?: number | null;
   created_at?: number | null;
   meta_values?: string | null;
   import_publish_date?: string;
+  post_thumbnail_id?: number | string;
 };
+
+function postThumbnailUrl(post: ThemePost): string | null {
+  const raw = post.post_thumbnail_id;
+  const id =
+    typeof raw === "number" ? raw : typeof raw === "string" ? parseInt(raw, 10) : NaN;
+  if (!id || Number.isNaN(id)) return null;
+  return `/api/media/${id}`;
+}
 
 const segment = String(Astro.params["locale"] ?? "").trim();
 const normalizedSegment = segment.toLowerCase();
@@ -33,19 +44,25 @@ const localeMap: Record<string, string> = {
 const isLocaleSegment = Boolean(localeMap[normalizedSegment]);
 const htmlLang = localeMap[normalizedSegment] ?? "pt-BR";
 
-const rows = (await themeContentGateway.getPostsByType("post", {
+const listingRows = (await themeContentGateway.getPostsByType("post", {
   limit: "1000",
+  listing: "1",
 })) as ThemePost[];
 
-const posts = rows
-  .filter((row) => row.status === "published")
+const posts = listingRows
+  .filter((row) => row.status === "published" && row.parent_id != null)
   .sort((a, b) => {
     const aTime = Number(a.published_at ?? a.created_at ?? 0);
     const bTime = Number(b.published_at ?? b.created_at ?? 0);
     return bTime - aTime;
   });
 
-const currentPost = isLocaleSegment ? null : posts.find((p) => p.slug === segment);
+const currentPost = isLocaleSegment
+  ? null
+  : ((await themeContentGateway.getPostsByType("post", {
+      "filters[slug][$eq]": segment,
+      limit: "1",
+    })) as ThemePost[])[0];
 if (!isLocaleSegment && !currentPost) {
   Astro.response.status = 404;
 }
@@ -54,6 +71,11 @@ const pageTitle = currentPost ? currentPost.title : "Rhamsés Blog";
 const pageDescription = currentPost?.excerpt?.trim()
   ? currentPost.excerpt.trim()
   : "Articles about software engineering and Web development.";
+const currentPostThumb = currentPost ? postThumbnailUrl(currentPost) : null;
+
+const currentPostBody = currentPost?.body
+  ? await highlightPlainCodeInHtml(currentPost.body)
+  : "";
 ---
 
 <!doctype html>
@@ -63,6 +85,7 @@ const pageDescription = currentPost?.excerpt?.trim()
     <meta name="viewport" content="width=device-width" />
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />
+    {currentPostThumb ? <meta property="og:image" content={currentPostThumb} /> : null}
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   </head>
   <body>
@@ -84,16 +107,25 @@ const pageDescription = currentPost?.excerpt?.trim()
                 <h1>{currentPost.title}</h1>
                 <hr />
               </header>
-              <article class="post-content" set:html={currentPost.body ?? ""} />
+              <article class="post-content" set:html={currentPostBody} />
             </div>
           ) : (
             <div class="container">
               <h1>Latest Articles</h1>
               {
-                posts.map((post, index) => (
+                posts.map((post, index) => {
+                  const thumb = postThumbnailUrl(post);
+                  return (
                   <div>
                     {index !== 0 && <hr />}
                     <div class="post-item">
+                      {thumb ? (
+                        <figure>
+                          <a href={`/${post.slug}`}>
+                            <img src={thumb} alt="" loading="lazy" />
+                          </a>
+                        </figure>
+                      ) : null}
                       <h2>
                         <a href={`/${post.slug}`}>{post.title}</a>
                       </h2>
@@ -107,7 +139,8 @@ const pageDescription = currentPost?.excerpt?.trim()
                       </div>
                     </div>
                   </div>
-                ))
+                  );
+                })
               }
             </div>
           )

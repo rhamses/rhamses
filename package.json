@@ -60,6 +60,7 @@
     "seed": "tsx scripts/seed-local.ts",
     "db:seed": "tsx scripts/seed-local.ts",
     "db:import:blog-content": "tsx scripts/import-blog-content.ts",
+    "db:import:blog-assets": "tsx scripts/import-blog-assets.ts",
     "db:dedupe-locales": "tsx scripts/deduplicate-locales.ts",
     "db:seed:generate-sql": "tsx scripts/generate-seed-sql.ts",
     "db:import:csv:generate-sql": "tsx scripts/generate-csv-import-sql.ts",
@@ -123,6 +124,7 @@
     "marked": "^18.0.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "shiki": "^4.1.0",
     "tailwindcss": "^4.1.18",
     "wrangler": "^4.56.0"
   }
