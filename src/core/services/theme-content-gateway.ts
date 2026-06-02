@@ -21,6 +21,7 @@ type PostRow = {
   excerpt: string | null;
   body: string | null;
   status: string | null;
+  parent_id?: number | null;
   published_at: number | null;
   created_at: number | null;
   updated_at: number | null;
@@ -87,6 +88,7 @@ function mapPostRecord(row: PostRow): LegacyPostRecord {
     excerpt: row.excerpt ?? "",
     body: row.body ?? "",
     status: row.status ?? "draft",
+    parent_id: row.parent_id ?? null,
     published_at: row.published_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -231,6 +233,7 @@ const POST_SELECT_SQL = `
     p.excerpt,
     p.body,
     p.status,
+    p.parent_id,
     p.published_at,
     p.created_at,
     p.updated_at,
@@ -322,6 +325,7 @@ export class ThemeContentGateway {
   async getPostsByType(postTypeSlug: string, params?: QueryInput): Promise<LegacyPostRecord[]> {
     const search = normalizeParams(params);
     const slugEq = search.get("filters[slug][$eq]") ?? search.get("slug");
+    const forListing = search.get("listing") === "1";
     const limit = Math.min(1000, Math.max(1, parseInt(search.get("limit") ?? "200", 10) || 200));
     const safeType = escapeSqlLiteral(postTypeSlug.trim());
     if (!safeType) return [];
@@ -334,6 +338,11 @@ export class ThemeContentGateway {
         )`
       : "";
 
+    const listingFilter = forListing
+      ? `AND p.parent_id IS NOT NULL
+        AND (json_extract(p.meta_values, '$.show_in_menu') IS NULL OR json_extract(p.meta_values, '$.show_in_menu') != 1)`
+      : "";
+
     return this.queryPosts(`
       ${POST_SELECT_SQL}
       WHERE p.status = 'published'
@@ -343,6 +352,7 @@ export class ThemeContentGateway {
           OR json_extract(p.meta_values, '$.legacy_posttype') = '${safeType}'
         )
         ${slugFilter}
+        ${listingFilter}
       ORDER BY CAST(json_extract(p.meta_values, '$.order') AS INTEGER) DESC, p.title ASC
       LIMIT ${limit}
     `);
