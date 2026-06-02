@@ -1,7 +1,12 @@
 name = "rhamses"
-pages_build_output_dir = "./dist/server"
 compatibility_date = "2024-09-23"
 compatibility_flags = [ "nodejs_compat" ]
+
+# Worker SSR + arquivos estáticos (/_astro/*, etc.). Não usar pages_build_output_dir aqui:
+# em Pages o nome ASSETS é reservado no wrangler.json, mas o runtime do Astro exige env.ASSETS.
+[assets]
+directory = "./dist/client"
+binding = "ASSETS"
 
 [env.production.vars]
 BETTER_AUTH_URL = "https://rhamses.amb1.workers.dev"
