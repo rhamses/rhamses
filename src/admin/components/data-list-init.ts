@@ -5,6 +5,11 @@ import {
 } from "./data-list-page-length.ts";
 import { serializeDataListOrder } from "./data-list-order.ts";
 import { registerDataListTableApi, tableApis } from "./data-list-client.ts";
+import {
+  bindServerFetchHtmx,
+  createServerFetchAjax,
+  type DataListActionTemplates,
+} from "./data-list-server-fetch.ts";
 
 const lengthMenu = [
   [...DATA_LIST_PAGE_LENGTH_OPTIONS],
@@ -117,19 +122,44 @@ export async function initDataListTable(
   const displayColumnKeys = table.dataset.displayColumnKeys?.split("|").filter(Boolean) ?? [];
 
   const DataTable = await loadDataTableDeps();
-  const clientFeatures = !config.serverPagination;
+  const serverFetchMode = Boolean(config.serverFetch);
+  const clientFeatures = !config.serverPagination && !serverFetchMode;
+  const showTableChrome = clientFeatures || serverFetchMode;
   const pageLength = normalizeDataListPageLength(config.pageLength);
   const orderingEnabled =
-    clientFeatures || (config.serverBackedOrder && (config.sortableColumnKeys?.length ?? 0) > 0);
+    showTableChrome || (config.serverBackedOrder && (config.sortableColumnKeys?.length ?? 0) > 0);
   const lengthMenu = buildLengthMenu(config);
   const language = config.language ?? { emptyTable: config.emptyMessage };
 
+  const serverFetchAjaxOptions = serverFetchMode
+    ? (() => {
+        const wrapper = table.closest(".data-list-wrapper");
+        let actionTemplates: DataListActionTemplates | null = null;
+        const rawTemplates = wrapper?.getAttribute("data-action-templates");
+        if (rawTemplates) {
+          try {
+            actionTemplates = JSON.parse(rawTemplates) as DataListActionTemplates;
+          } catch {
+            actionTemplates = null;
+          }
+        }
+        return {
+          displayColumnKeys,
+          sortableColumnKeys: config.sortableColumnKeys ?? [],
+          columnIndexOffset: config.selectable ? 1 : 0,
+          linkColumnKey: table.dataset.linkColumnKey ?? "title",
+          actionTemplates,
+          hasActions: Boolean(config.hasActions),
+        };
+      })()
+    : null;
+
   const dt = new DataTable(table, {
-    paging: clientFeatures,
+    paging: showTableChrome,
     searching: true,
     ordering: orderingEnabled,
     orderMulti: true,
-    info: clientFeatures,
+    info: showTableChrome,
     lengthChange: true,
     pageLength,
     lengthMenu,
@@ -137,15 +167,31 @@ export async function initDataListTable(
     autoWidth: false,
     language,
     columnDefs: buildColumnDefs(config),
+  ...(serverFetchMode && config.serverFetch
+    ? {
+        serverSide: true,
+        processing: true,
+        pagingType: "full_numbers",
+        displayStart: (config.serverFetch.page - 1) * pageLength,
+        ajax: createServerFetchAjax(config, serverFetchAjaxOptions!),
+        createdRow: (row: HTMLTableRowElement, data: string[]) => {
+          const cells = row.querySelectorAll("td");
+          data.forEach((html, index) => {
+            const cell = cells[index];
+            if (cell) cell.innerHTML = html;
+          });
+        },
+      }
+    : {}),
     layout: {
       topStart: "pageLength",
       topEnd: "search",
-      bottomStart: clientFeatures ? "info" : null,
-      bottomEnd: clientFeatures ? "paging" : null,
+      bottomStart: showTableChrome ? "info" : null,
+      bottomEnd: showTableChrome ? "paging" : null,
     },
   });
 
-  if (config.serverPagination && config.limitUrlTemplate) {
+  if (config.serverPagination && !serverFetchMode && config.limitUrlTemplate) {
     const template = config.limitUrlTemplate;
     dt.on("length.dt", () => {
       const url = template.replace(
@@ -172,6 +218,10 @@ export async function initDataListTable(
 
   if (config.selectAllId) {
     bindSelectAll(table, config.selectAllId);
+  }
+
+  if (serverFetchMode) {
+    bindServerFetchHtmx(table);
   }
 
   return dt;

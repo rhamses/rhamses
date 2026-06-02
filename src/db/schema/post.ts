@@ -1,6 +1,6 @@
 import { index, int, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
-import { prefixedTable } from "../table-prefix.ts";
+import { indexName, tableName } from "../table-prefix.ts";
 import { postTypes } from "./post_type.ts";
 import { user } from "./auth.ts";
 import { locales } from "./locales.ts";
@@ -10,7 +10,7 @@ import { locales } from "./locales.ts";
  * Armazena conteúdo de diferentes tipos (post, page, attachment, etc)
  */
 export const posts = sqliteTable(
-  prefixedTable("posts"),
+  tableName("posts"),
   {
     id: int().primaryKey({ autoIncrement: true }),
     post_type_id: int("post_type_id")
@@ -23,6 +23,7 @@ export const posts = sqliteTable(
     slug: text().notNull().unique(),
     excerpt: text(),
     body: text(),
+    /** BlockNote JSON (editor); HTML legado fica em `body`. */
     body_blocks: text("body_blocks"),
     status: text({ enum: ["published", "draft", "archived", "trash"] }).default("draft"),
     meta_values: text(),
@@ -31,14 +32,14 @@ export const posts = sqliteTable(
     updated_at: int(),
   },
   (table) => ({
-    postTypeIdIdx: index("posts_post_type_id_idx").on(table.post_type_id),
-    parentIdIdx: index("posts_parent_id_idx").on(table.parent_id),
-    authorIdIdx: index("posts_author_id_idx").on(table.author_id),
-    localeCodeIdIdx: index("posts_id_locale_code_idx").on(table.id_locale_code),
-    statusIdx: index("posts_status_idx").on(table.status),
-    createdAtIdx: index("posts_created_at_idx").on(table.created_at),
-    updatedAtIdx: index("posts_updated_at_idx").on(table.updated_at),
-    slugIdx: index("posts_slug_idx").on(table.slug),
+    postTypeIdIdx: index(indexName("posts_post_type_id_idx")).on(table.post_type_id),
+    parentIdIdx: index(indexName("posts_parent_id_idx")).on(table.parent_id),
+    authorIdIdx: index(indexName("posts_author_id_idx")).on(table.author_id),
+    localeCodeIdIdx: index(indexName("posts_id_locale_code_idx")).on(table.id_locale_code),
+    statusIdx: index(indexName("posts_status_idx")).on(table.status),
+    createdAtIdx: index(indexName("posts_created_at_idx")).on(table.created_at),
+    updatedAtIdx: index(indexName("posts_updated_at_idx")).on(table.updated_at),
+    slugIdx: index(indexName("posts_slug_idx")).on(table.slug),
   })
 );
 

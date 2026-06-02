@@ -1,6 +1,6 @@
 # Edgepress
 
-**Version:** `0.0.1` · A WordPress-inspired CMS that runs on the **edge** (Cloudflare Workers / Pages).
+**Version:** `0.0.1` · A WordPress-inspired CMS that runs on the **edge** (Cloudflare Workers).
 
 Edgepress provides content management, a full admin panel, public themes, i18n, taxonomies, R2 media storage, KV caching, and REST APIs for reads and writes — all in a single Astro SSR deploy on Cloudflare.
 
@@ -9,10 +9,10 @@ Edgepress provides content management, a full admin panel, public themes, i18n, 
 | Layer | Technology |
 |-------|------------|
 | Framework | [Astro 6](https://astro.build) (SSR) + [@astrojs/cloudflare](https://docs.astro.build/en/guides/integrations-guide/cloudflare/) |
-| Runtime | Cloudflare Pages / Workers (`nodejs_compat`) |
+| Runtime | Cloudflare Workers (`nodejs_compat`) |
 | Database | **D1** (SQLite) + **Drizzle ORM** |
-| Cache / sessions | **KV** (`edgepress_cache`) |
-| Media | **R2** (`edgepress-media`) |
+| Cache / sessions | **KV** (`CACHE`) |
+| Media | **R2** (`MEDIA_BUCKET`) |
 | Auth | [Better Auth](https://www.better-auth.com/) (email/password, roles, KV sessions) |
 | Admin UI | **HTMX** + **Alpine.js** + **Tailwind CSS 4** + **DaisyUI** |
 | Editor | **BlockNote** (React) + **Uppy** (uploads) |
@@ -117,7 +117,7 @@ In production, set secrets in the Cloudflare dashboard or via `wrangler secret p
 | Binding | Purpose |
 |---------|---------|
 | `DB` (D1) | Primary database, migrations in `./drizzle` |
-| `edgepress_cache` (KV) | Read cache and Astro sessions |
+| `CACHE` (KV) | Read cache and Astro sessions |
 | `MEDIA_BUCKET` (R2) | Uploads and attachments |
 
 Update `database_id`, KV `id`, and bucket name for your account.
@@ -147,6 +147,7 @@ npm run db:migrate:local     # apply to local D1
 npm run db:seed              # local seed
 npm run db:migrate:remote    # production
 npm run db:seed:remote       # remote seed (generated SQL)
+npm run db:seed:remote:dev   # remote seed (dev D1)
 ```
 
 ## Build and deploy
@@ -155,7 +156,14 @@ npm run db:seed:remote       # remote seed (generated SQL)
 npm run build
 ```
 
-Output goes to `./dist/server` (`pages_build_output_dir` in `wrangler.toml`). Connect the repo to **Cloudflare Pages** with build command `npm run build`.
+Output goes to `./dist/server` with static assets in `./dist/client` (see `wrangler.toml`).
+
+```bash
+npm run deploy          # production
+npm run deploy:preview  # preview/staging (--env preview)
+```
+
+Configure secrets with `wrangler secret put` (e.g. `BETTER_AUTH_SECRET`, `RESEND_API_KEY`). Public vars live in `[vars]` / `[env.preview.vars]`.
 
 For a pipeline with migrations/seed:
 
@@ -166,7 +174,7 @@ npm run build:seed
 ### CI: themes and deploy
 
 1. **`theme-import-dispatch.yml`** — downloads a public theme from GitHub, packages it, uploads to R2, and calls the callback.
-2. **`deploy-app.yml`** — hydrates the active theme from R2, validates checksum, runs `npm run build`, and deploys.
+2. **`deploy-app.yml`** — hydrates the active theme from R2, validates checksum, runs `npm run build`, and deploys with `wrangler deploy`.
 
 Required secrets are documented in the workflows and in `.env.example` (`THEME_IMPORT_*`, `THEME_PACKAGE_*`, R2 and Cloudflare credentials).
 

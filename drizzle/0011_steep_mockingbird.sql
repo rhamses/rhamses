@@ -1,11 +1,11 @@
-CREATE TABLE `settings` (
+CREATE TABLE `edp_settings` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
 	`value` text NOT NULL,
 	`autoload` integer DEFAULT true NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `settings_name_idx` ON `settings` (`name`);--> statement-breakpoint
+CREATE INDEX `edp_settings_name_idx` ON `edp_settings` (`name`);--> statement-breakpoint
 CREATE TABLE `__new_posts` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`post_type_id` integer NOT NULL,
@@ -21,16 +21,16 @@ CREATE TABLE `__new_posts` (
 	`updated_at` integer
 );
 --> statement-breakpoint
-INSERT INTO `__new_posts`("id", "post_type_id", "author_id", "title", "slug", "excerpt", "body", "status", "meta_values", "published_at", "created_at", "updated_at") SELECT "id", "post_type_id", "author_id", "title", "slug", "excerpt", "body", "status", "meta_values", "published_at", "created_at", "updated_at" FROM `posts`;--> statement-breakpoint
-DROP TABLE `posts`;--> statement-breakpoint
-ALTER TABLE `__new_posts` RENAME TO `posts`;--> statement-breakpoint
-CREATE UNIQUE INDEX `posts_slug_unique` ON `posts` (`slug`);--> statement-breakpoint
-CREATE INDEX `posts_post_type_id_idx` ON `posts` (`post_type_id`);--> statement-breakpoint
-CREATE INDEX `posts_author_id_idx` ON `posts` (`author_id`);--> statement-breakpoint
-CREATE INDEX `posts_status_idx` ON `posts` (`status`);--> statement-breakpoint
-CREATE INDEX `posts_created_at_idx` ON `posts` (`created_at`);--> statement-breakpoint
-CREATE INDEX `posts_updated_at_idx` ON `posts` (`updated_at`);--> statement-breakpoint
-CREATE INDEX `posts_slug_idx` ON `posts` (`slug`);--> statement-breakpoint
+INSERT INTO `__new_posts`("id", "post_type_id", "author_id", "title", "slug", "excerpt", "body", "status", "meta_values", "published_at", "created_at", "updated_at") SELECT "id", "post_type_id", "author_id", "title", "slug", "excerpt", "body", "status", "meta_values", "published_at", "created_at", "updated_at" FROM `edp_posts`;--> statement-breakpoint
+DROP TABLE `edp_posts`;--> statement-breakpoint
+ALTER TABLE `__new_posts` RENAME TO `edp_posts`;--> statement-breakpoint
+CREATE UNIQUE INDEX `edp_posts_slug_unique` ON `edp_posts` (`slug`);--> statement-breakpoint
+CREATE INDEX `edp_posts_post_type_id_idx` ON `edp_posts` (`post_type_id`);--> statement-breakpoint
+CREATE INDEX `edp_posts_author_id_idx` ON `edp_posts` (`author_id`);--> statement-breakpoint
+CREATE INDEX `edp_posts_status_idx` ON `edp_posts` (`status`);--> statement-breakpoint
+CREATE INDEX `edp_posts_created_at_idx` ON `edp_posts` (`created_at`);--> statement-breakpoint
+CREATE INDEX `edp_posts_updated_at_idx` ON `edp_posts` (`updated_at`);--> statement-breakpoint
+CREATE INDEX `edp_posts_slug_idx` ON `edp_posts` (`slug`);--> statement-breakpoint
 CREATE TABLE `__new_taxonomies` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
@@ -42,13 +42,13 @@ CREATE TABLE `__new_taxonomies` (
 	`updated_at` integer
 );
 --> statement-breakpoint
-INSERT INTO `__new_taxonomies`("id", "name", "slug", "description", "type", "parent_id", "created_at", "updated_at") SELECT "id", "name", "slug", "description", "type", "parent_id", "created_at", "updated_at" FROM `taxonomies`;--> statement-breakpoint
-DROP TABLE `taxonomies`;--> statement-breakpoint
-ALTER TABLE `__new_taxonomies` RENAME TO `taxonomies`;--> statement-breakpoint
-CREATE INDEX `taxonomies_type_idx` ON `taxonomies` (`type`);--> statement-breakpoint
-CREATE INDEX `taxonomies_parent_id_idx` ON `taxonomies` (`parent_id`);--> statement-breakpoint
-CREATE INDEX `taxonomies_slug_idx` ON `taxonomies` (`slug`);--> statement-breakpoint
-CREATE UNIQUE INDEX `taxonomies_type_slug_idx` ON `taxonomies` (`type`,`slug`);--> statement-breakpoint
+INSERT INTO `__new_taxonomies`("id", "name", "slug", "description", "type", "parent_id", "created_at", "updated_at") SELECT "id", "name", "slug", "description", "type", "parent_id", "created_at", "updated_at" FROM `edp_taxonomies`;--> statement-breakpoint
+DROP TABLE `edp_taxonomies`;--> statement-breakpoint
+ALTER TABLE `__new_taxonomies` RENAME TO `edp_taxonomies`;--> statement-breakpoint
+CREATE INDEX `edp_taxonomies_type_idx` ON `edp_taxonomies` (`type`);--> statement-breakpoint
+CREATE INDEX `edp_taxonomies_parent_id_idx` ON `edp_taxonomies` (`parent_id`);--> statement-breakpoint
+CREATE INDEX `edp_taxonomies_slug_idx` ON `edp_taxonomies` (`slug`);--> statement-breakpoint
+CREATE UNIQUE INDEX `edp_taxonomies_type_slug_idx` ON `edp_taxonomies` (`type`,`slug`);--> statement-breakpoint
 CREATE TABLE `__new_post_types` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`slug` text NOT NULL,
@@ -58,11 +58,11 @@ CREATE TABLE `__new_post_types` (
 	`updated_at` integer
 );
 --> statement-breakpoint
-INSERT INTO `__new_post_types`("id", "slug", "name", "meta_schema", "created_at", "updated_at") SELECT "id", "slug", "name", "meta_schema", "created_at", "updated_at" FROM `post_types`;--> statement-breakpoint
-DROP TABLE `post_types`;--> statement-breakpoint
-ALTER TABLE `__new_post_types` RENAME TO `post_types`;--> statement-breakpoint
-CREATE UNIQUE INDEX `post_types_slug_unique` ON `post_types` (`slug`);--> statement-breakpoint
-CREATE INDEX `post_types_slug_idx` ON `post_types` (`slug`);--> statement-breakpoint
+INSERT INTO `__new_post_types`("id", "slug", "name", "meta_schema", "created_at", "updated_at") SELECT "id", "slug", "name", "meta_schema", "created_at", "updated_at" FROM `edp_post_types`;--> statement-breakpoint
+DROP TABLE `edp_post_types`;--> statement-breakpoint
+ALTER TABLE `__new_post_types` RENAME TO `edp_post_types`;--> statement-breakpoint
+CREATE UNIQUE INDEX `edp_post_types_slug_unique` ON `edp_post_types` (`slug`);--> statement-breakpoint
+CREATE INDEX `edp_post_types_slug_idx` ON `edp_post_types` (`slug`);--> statement-breakpoint
 CREATE TABLE `__new_user` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -74,20 +74,20 @@ CREATE TABLE `__new_user` (
 	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
-INSERT INTO `__new_user`("id", "name", "email", "email_verified", "image", "role", "created_at", "updated_at") SELECT "id", "name", "email", "email_verified", "image", "role", "created_at", "updated_at" FROM `user`;--> statement-breakpoint
-DROP TABLE `user`;--> statement-breakpoint
-ALTER TABLE `__new_user` RENAME TO `user`;--> statement-breakpoint
-CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);--> statement-breakpoint
+INSERT INTO `__new_user`("id", "name", "email", "email_verified", "image", "role", "created_at", "updated_at") SELECT "id", "name", "email", "email_verified", "image", "role", "created_at", "updated_at" FROM `edp_user`;--> statement-breakpoint
+DROP TABLE `edp_user`;--> statement-breakpoint
+ALTER TABLE `__new_user` RENAME TO `edp_user`;--> statement-breakpoint
+CREATE UNIQUE INDEX `edp_user_email_unique` ON `edp_user` (`email`);--> statement-breakpoint
 CREATE TABLE `__new_posts_media` (
 	`post_id` integer NOT NULL,
 	`media_id` integer NOT NULL,
 	PRIMARY KEY(`post_id`, `media_id`)
 );
 --> statement-breakpoint
-INSERT INTO `__new_posts_media`("post_id", "media_id") SELECT "post_id", "media_id" FROM `posts_media`;--> statement-breakpoint
-DROP TABLE `posts_media`;--> statement-breakpoint
-ALTER TABLE `__new_posts_media` RENAME TO `posts_media`;--> statement-breakpoint
-CREATE INDEX `posts_media_post_id_idx` ON `posts_media` (`post_id`);--> statement-breakpoint
-CREATE INDEX `posts_media_media_id_idx` ON `posts_media` (`media_id`);--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS `posts_taxonomies_post_id_idx` ON `posts_taxonomies` (`post_id`);--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS `posts_taxonomies_term_id_idx` ON `posts_taxonomies` (`term_id`);
+INSERT INTO `__new_posts_media`("post_id", "media_id") SELECT "post_id", "media_id" FROM `edp_posts_media`;--> statement-breakpoint
+DROP TABLE `edp_posts_media`;--> statement-breakpoint
+ALTER TABLE `__new_posts_media` RENAME TO `edp_posts_media`;--> statement-breakpoint
+CREATE INDEX `edp_posts_media_post_id_idx` ON `edp_posts_media` (`post_id`);--> statement-breakpoint
+CREATE INDEX `edp_posts_media_media_id_idx` ON `edp_posts_media` (`media_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `edp_posts_taxonomies_post_id_idx` ON `edp_posts_taxonomies` (`post_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `edp_posts_taxonomies_term_id_idx` ON `edp_posts_taxonomies` (`term_id`);

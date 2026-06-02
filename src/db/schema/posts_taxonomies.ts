@@ -1,6 +1,6 @@
 import { index, int, primaryKey, sqliteTable } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
-import { prefixedTable } from "../table-prefix.ts";
+import { indexName, tableName } from "../table-prefix.ts";
 import { posts } from "./post.ts";
 import { taxonomies } from "./taxonomies.ts";
 
@@ -9,7 +9,7 @@ import { taxonomies } from "./taxonomies.ts";
  * Tabela pivot para relacionamento many-to-many entre posts e taxonomias
  */
 export const postsTaxonomies = sqliteTable(
-  prefixedTable("posts_taxonomies"),
+  tableName("posts_taxonomies"),
   {
     post_id: int("post_id")
       .notNull()
@@ -20,8 +20,8 @@ export const postsTaxonomies = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.post_id, table.term_id] }),
-    postIdIdx: index("posts_taxonomies_post_id_idx").on(table.post_id),
-    termIdIdx: index("posts_taxonomies_term_id_idx").on(table.term_id),
+    postIdIdx: index(indexName("posts_taxonomies_post_id_idx")).on(table.post_id),
+    termIdIdx: index(indexName("posts_taxonomies_term_id_idx")).on(table.term_id),
   })
 );
 

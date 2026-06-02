@@ -8,8 +8,8 @@ CREATE TABLE `__new_post_types` (
 	`updated_at` integer
 );
 --> statement-breakpoint
-INSERT INTO `__new_post_types`("id", "slug", "name", "meta_schema", "created_at", "updated_at") SELECT "id", "slug", "name", "meta_schema", "created_at", "updated_at" FROM `post_types`;--> statement-breakpoint
-DROP TABLE `post_types`;--> statement-breakpoint
-ALTER TABLE `__new_post_types` RENAME TO `post_types`;--> statement-breakpoint
+INSERT INTO `__new_post_types`("id", "slug", "name", "meta_schema", "created_at", "updated_at") SELECT "id", "slug", "name", "meta_schema", "created_at", "updated_at" FROM `edp_post_types`;--> statement-breakpoint
+DROP TABLE `edp_post_types`;--> statement-breakpoint
+ALTER TABLE `__new_post_types` RENAME TO `edp_post_types`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS `post_types_slug_unique` ON `post_types` (`slug`);
+CREATE UNIQUE INDEX IF NOT EXISTS `edp_post_types_slug_unique` ON `edp_post_types` (`slug`);

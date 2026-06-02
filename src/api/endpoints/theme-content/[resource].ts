@@ -27,6 +27,13 @@ export const GET: APIRoute = async ({ params, url }) => {
     return jsonResponse({ data });
   }
 
+  if (resource === "page") {
+    const slug = (url.searchParams.get("slug") ?? "").trim();
+    if (!slug) return badRequestResponse("slug is required for page");
+    const data = await themeContentGateway.getPageBySlug(slug, query);
+    return jsonResponse({ data });
+  }
+
   if (resource === "job") {
     const slug = (url.searchParams.get("slug") ?? "").trim();
     if (!slug) return badRequestResponse("slug is required for job");
@@ -43,6 +50,22 @@ export const GET: APIRoute = async ({ params, url }) => {
     const id = url.searchParams.get("id");
     const numericId = id && /^\d+$/.test(id) ? parseInt(id, 10) : undefined;
     const data = await themeContentGateway.getCategories(numericId);
+    return jsonResponse({ data });
+  }
+
+  if (resource === "category") {
+    const slug = (url.searchParams.get("slug") ?? "").trim();
+    if (!slug) return badRequestResponse("slug is required for category");
+    const lang = (url.searchParams.get("lang") ?? "").trim() || undefined;
+    const metaKey = (url.searchParams.get("metaKey") ?? "").trim();
+    const metaValue = (url.searchParams.get("metaValue") ?? "").trim();
+    const postType = (url.searchParams.get("postType") ?? "").trim() || undefined;
+    const requireBody = url.searchParams.get("requireBody") === "1";
+    const data = await themeContentGateway.getPostsByCategorySlug(slug, lang, {
+      postTypeSlug: postType,
+      requireBody,
+      meta: metaKey && metaValue ? { [metaKey]: metaValue } : undefined,
+    });
     return jsonResponse({ data });
   }
 
