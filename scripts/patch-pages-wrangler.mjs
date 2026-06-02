@@ -1,7 +1,8 @@
 /**
- * Cloudflare Pages reserves the ASSETS binding; the platform injects it automatically.
- * @astrojs/cloudflare still adds assets.binding=ASSETS to dist/server/wrangler.json when
- * pages_build_output_dir is set — remove it so `wrangler deploy` succeeds on Pages CI.
+ * Ajustes em dist/server/wrangler.json após `astro build`.
+ *
+ * - Projetos Pages (pages_build_output_dir): remove assets explícito (ASSETS é reservado no wrangler).
+ * - Projetos Worker (rhamses): mantém assets — o handler @astrojs/cloudflare usa env.ASSETS.fetch.
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -17,12 +18,18 @@ const config = JSON.parse(readFileSync(wranglerJsonPath, "utf8"));
 const isPages = Boolean(config.pages_build_output_dir);
 
 if (!isPages) {
-  console.log("[patch-pages-wrangler] Not a Pages project; no changes.");
+  if (!config.assets?.binding) {
+    config.assets = { binding: "ASSETS", directory: "../client" };
+    writeFileSync(wranglerJsonPath, JSON.stringify(config));
+    console.log("[patch-pages-wrangler] Ensured ASSETS binding for Worker deploy.");
+  } else {
+    console.log("[patch-pages-wrangler] Worker project; ASSETS binding kept.");
+  }
   process.exit(0);
 }
 
 if (!config.assets) {
-  console.log("[patch-pages-wrangler] No assets binding present; no changes.");
+  console.log("[patch-pages-wrangler] Pages project; no assets block to remove.");
   process.exit(0);
 }
 
