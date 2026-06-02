@@ -20,6 +20,10 @@ import {
 import { t } from "../../i18n/index.ts";
 import { POST_TYPES_WITH_CUSTOM_FIELDS } from "../../db/seed-data.ts";
 import { buildDefaultSeoCustomFieldBlock } from "./seo-metadata-service.ts";
+import {
+  mergeDiretoresCustomFieldsFromMeta,
+  postHasDiretoresCategory,
+} from "../../utils/diretores-custom-fields.ts";
 
 export type TypeRow = { id: number; name: string; meta_schema: unknown };
 
@@ -196,20 +200,32 @@ export async function getContentPageData(params: {
           .orderBy(taxonomies.name)
       : [];
 
-  const taxonomyBlocks: TaxonomyBlock[] = await Promise.all(
-    taxonomyRoots.map(async (root) => {
-      const children = await db
-        .select({
-          id: taxonomies.id,
-          name: taxonomies.name,
-          slug: taxonomies.slug,
-        })
-        .from(taxonomies)
-        .where(eq(taxonomies.parent_id, root.id))
-        .orderBy(taxonomies.name);
-      return { ...root, children };
-    })
-  );
+  let taxonomyBlocks: TaxonomyBlock[] = [];
+
+  async function loadTaxonomyBlocks(localeCode: number | null | undefined): Promise<TaxonomyBlock[]> {
+    return Promise.all(
+      taxonomyRoots.map(async (root) => {
+        const childConditions = [eq(taxonomies.parent_id, root.id)];
+        if (localeCode != null) {
+          childConditions.push(
+            or(isNull(taxonomies.id_locale_code), eq(taxonomies.id_locale_code, localeCode))!
+          );
+        }
+        const children = await db
+          .select({
+            id: taxonomies.id,
+            name: taxonomies.name,
+            slug: taxonomies.slug,
+          })
+          .from(taxonomies)
+          .where(and(...childConditions))
+          .orderBy(taxonomies.name);
+        return { ...root, children };
+      })
+    );
+  }
+
+  taxonomyBlocks = await loadTaxonomyBlocks(undefined);
 
   const users = await db
     .select({ id: userTable.id, name: userTable.name })
@@ -302,6 +318,7 @@ export async function getContentPageData(params: {
       .from(postsTaxonomies)
       .where(eq(postsTaxonomies.post_id, post.id));
     selectedTermIds = links.map((l) => l.term_id);
+    taxonomyBlocks = await loadTaxonomyBlocks(post.id_locale_code);
 
     if (post.meta_values) {
       try {
@@ -448,6 +465,21 @@ export async function getContentPageData(params: {
           template,
         };
       });
+
+      if (post && (await postHasDiretoresCategory(db, post.id))) {
+        let meta: Record<string, unknown> = {};
+        if (post.meta_values) {
+          try {
+            meta = JSON.parse(post.meta_values) as Record<string, unknown>;
+          } catch {
+            meta = {};
+          }
+        }
+        initialCustomFields = mergeDiretoresCustomFieldsFromMeta(
+          initialCustomFields,
+          meta,
+        );
+      }
     }
   }
 

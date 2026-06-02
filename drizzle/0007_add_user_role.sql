@@ -1,1 +1,1 @@
-ALTER TABLE `user` ADD COLUMN `role` text DEFAULT 'leitor';
+ALTER TABLE `edp_user` ADD COLUMN `role` text DEFAULT 'leitor';

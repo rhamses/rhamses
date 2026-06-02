@@ -1,1 +1,1 @@
-ALTER TABLE `taxonomies` ADD COLUMN `description` text;
+ALTER TABLE `edp_taxonomies` ADD COLUMN `description` text;

@@ -1,5 +1,4 @@
 // blind update
-import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -55,7 +54,7 @@ function shouldIncludeInSitemap(page) {
 export default defineConfig({
   site: siteOrigin,
   adapter: cloudflare({
-    sessionKVBindingName: "edgepress_cache",
+    sessionKVBindingName: "CACHE",
     platformProxy: {
       enabled: true,
       configPath: "wrangler.toml",
@@ -63,7 +62,7 @@ export default defineConfig({
   }),
   /**
    * Autenticação usa better-auth; não usamos a API de sessão do Astro.
-   * Sem driver explícito, o adapter Cloudflare injeta KV SESSION sem id (quebra o deploy no Pages).
+   * Sem driver explícito, o adapter Cloudflare injeta KV SESSION sem id.
    */
   session: {
     driver: sessionDrivers.memory(),
@@ -78,30 +77,7 @@ export default defineConfig({
   },
 
   vite: {
-    plugins: [
-      tailwindcss(),
-      /**
-       * O adapter Cloudflare escreve `assets.binding: ASSETS` em dist/server/wrangler.json;
-       * o Pages rejeita esse binding. O npm `postbuild` não corre com `npx astro build` só.
-       * Repetimos o patch aqui no fim do bundle do servidor para `wrangler deploy` estar sempre seguro.
-       */
-      {
-        name: "edgepress-patch-pages-wrangler",
-        apply: "build",
-        enforce: "post",
-        /** Uma vez por invocação `vite build` (cliente + servidor = pode correr 2x; o script é idempotente). */
-        buildEnd() {
-          try {
-            execFileSync(process.execPath, [patchPagesWrangler], {
-              cwd: root,
-              stdio: "inherit",
-            });
-          } catch {
-            /* dist/server/wrangler.json ainda não existe nesta fase */
-          }
-        },
-      },
-    ],
+    plugins: [tailwindcss()],
     // Astro 6 + @cloudflare/vite-plugin: otimização incremental de deps no workerd pode
     // invalidar chunks em node_modules/.vite/deps_ssr durante reload ("file does not exist"
     // / "Module is undefined"). Mantém drizzle/auth/libsql fora do dep optimizer.

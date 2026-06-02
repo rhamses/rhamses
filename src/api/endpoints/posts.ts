@@ -32,6 +32,11 @@ import {
   parseNumericId,
 } from "../../utils/validation.ts";
 import { stringifyMetaValues } from "../../utils/meta-parser.ts";
+import { applyJobsCustomFieldsToMeta } from "../../utils/jobs-custom-fields.ts";
+import {
+  applyDiretoresCustomFieldsToMeta,
+  postHasDiretoresCategory,
+} from "../../utils/diretores-custom-fields.ts";
 
 // Utils - HTTP & Errors
 import { handleApiError } from "../../utils/error-handler.ts";
@@ -612,6 +617,22 @@ export async function POST({
                   created_at: now,
                   updated_at: now,
                 });
+              }
+
+              if (post_type === "jobs") {
+                await applyJobsCustomFieldsToMeta(
+                  db,
+                  postId,
+                  postTypeId,
+                  customFieldsItems,
+                );
+              } else if (await postHasDiretoresCategory(db, postId)) {
+                await applyDiretoresCustomFieldsToMeta(
+                  db,
+                  postId,
+                  postTypeId,
+                  customFieldsItems,
+                );
               }
             }
           } catch {

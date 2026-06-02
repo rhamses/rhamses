@@ -7,8 +7,8 @@ CREATE TABLE `__new_post_types` (
 	`created_at` integer,
 	`updated_at` integer
 );
-INSERT INTO `__new_post_types`("id", "slug", "name", "meta_schema", "created_at", "updated_at") SELECT "id", "slug", "name", "meta_schema", "created_at", "updated_at" FROM `post_types`;
-DROP TABLE `post_types`;
-ALTER TABLE `__new_post_types` RENAME TO `post_types`;
+INSERT INTO `__new_post_types`("id", "slug", "name", "meta_schema", "created_at", "updated_at") SELECT "id", "slug", "name", "meta_schema", "created_at", "updated_at" FROM `edp_post_types`;
+DROP TABLE `edp_post_types`;
+ALTER TABLE `__new_post_types` RENAME TO `edp_post_types`;
 PRAGMA defer_foreign_keys=off;--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS `post_types_slug_unique` ON `post_types` (`slug`);
+CREATE UNIQUE INDEX IF NOT EXISTS `edp_post_types_slug_unique` ON `edp_post_types` (`slug`);

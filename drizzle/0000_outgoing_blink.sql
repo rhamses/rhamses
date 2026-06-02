@@ -1,4 +1,4 @@
-CREATE TABLE `post_types` (
+CREATE TABLE `edp_post_types` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`slug` text NOT NULL,
 	`name` text NOT NULL,
@@ -6,8 +6,8 @@ CREATE TABLE `post_types` (
 	`created_at` integer
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `post_types_slug_unique` ON `post_types` (`slug`);--> statement-breakpoint
-CREATE TABLE `posts` (
+CREATE UNIQUE INDEX `edp_post_types_slug_unique` ON `edp_post_types` (`slug`);--> statement-breakpoint
+CREATE TABLE `edp_posts` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`type_id` integer,
 	`author_id` text,
@@ -20,30 +20,30 @@ CREATE TABLE `posts` (
 	`published_at` integer,
 	`created_at` integer,
 	`updated_at` integer,
-	FOREIGN KEY (`type_id`) REFERENCES `post_types`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`type_id`) REFERENCES `edp_post_types`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `posts_slug_unique` ON `posts` (`slug`);--> statement-breakpoint
-CREATE TABLE `posts_media` (
+CREATE UNIQUE INDEX `edp_posts_slug_unique` ON `edp_posts` (`slug`);--> statement-breakpoint
+CREATE TABLE `edp_posts_media` (
 	`post_id` integer NOT NULL,
 	`media_id` integer NOT NULL,
 	PRIMARY KEY(`post_id`, `media_id`),
-	FOREIGN KEY (`post_id`) REFERENCES `posts`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`post_id`) REFERENCES `edp_posts`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `posts_taxonomies` (
+CREATE TABLE `edp_posts_taxonomies` (
 	`post_id` integer NOT NULL,
 	`term_id` integer NOT NULL,
 	PRIMARY KEY(`post_id`, `term_id`),
-	FOREIGN KEY (`post_id`) REFERENCES `posts`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`term_id`) REFERENCES `taxonomies`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`post_id`) REFERENCES `edp_posts`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`term_id`) REFERENCES `edp_taxonomies`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `taxonomies` (
+CREATE TABLE `edp_taxonomies` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
 	`slug` text NOT NULL,
 	`type` text NOT NULL,
 	`parent_id` integer,
-	FOREIGN KEY (`parent_id`) REFERENCES `taxonomies`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`parent_id`) REFERENCES `edp_taxonomies`(`id`) ON UPDATE no action ON DELETE no action
 );

@@ -3,10 +3,10 @@
 
 CREATE TABLE "posts_new" (
   "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-  "post_type_id" INTEGER NOT NULL REFERENCES "post_types"("id") ON DELETE RESTRICT,
+  "post_type_id" INTEGER NOT NULL REFERENCES "edp_post_types"("id") ON DELETE RESTRICT,
   "parent_id" INTEGER,
-  "author_id" TEXT REFERENCES "user"("id") ON DELETE SET NULL,
-  "id_locale_code" INTEGER REFERENCES "locales"("id") ON DELETE SET NULL,
+  "author_id" TEXT REFERENCES "edp_user"("id") ON DELETE SET NULL,
+  "id_locale_code" INTEGER REFERENCES "edp_locales"("id") ON DELETE SET NULL,
   "title" TEXT NOT NULL,
   "slug" TEXT NOT NULL,
   "excerpt" TEXT,
@@ -49,18 +49,18 @@ SELECT
   "published_at",
   "created_at",
   "updated_at"
-FROM "posts";
+FROM "edp_posts";
 
-DROP TABLE "posts";
+DROP TABLE "edp_posts";
 
-ALTER TABLE "posts_new" RENAME TO "posts";
+ALTER TABLE "posts_new" RENAME TO "edp_posts";
 
-CREATE UNIQUE INDEX "posts_slug_unique" ON "posts" ("slug");
-CREATE INDEX "posts_post_type_id_idx" ON "posts" ("post_type_id");
-CREATE INDEX "posts_parent_id_idx" ON "posts" ("parent_id");
-CREATE INDEX "posts_author_id_idx" ON "posts" ("author_id");
-CREATE INDEX "posts_id_locale_code_idx" ON "posts" ("id_locale_code");
-CREATE INDEX "posts_status_idx" ON "posts" ("status");
-CREATE INDEX "posts_created_at_idx" ON "posts" ("created_at");
-CREATE INDEX "posts_updated_at_idx" ON "posts" ("updated_at");
-CREATE INDEX "posts_slug_idx" ON "posts" ("slug");
+CREATE UNIQUE INDEX "edp_posts_slug_unique" ON "edp_posts" ("slug");
+CREATE INDEX "edp_posts_post_type_id_idx" ON "edp_posts" ("post_type_id");
+CREATE INDEX "edp_posts_parent_id_idx" ON "edp_posts" ("parent_id");
+CREATE INDEX "edp_posts_author_id_idx" ON "edp_posts" ("author_id");
+CREATE INDEX "edp_posts_id_locale_code_idx" ON "edp_posts" ("id_locale_code");
+CREATE INDEX "edp_posts_status_idx" ON "edp_posts" ("status");
+CREATE INDEX "edp_posts_created_at_idx" ON "edp_posts" ("created_at");
+CREATE INDEX "edp_posts_updated_at_idx" ON "edp_posts" ("updated_at");
+CREATE INDEX "edp_posts_slug_idx" ON "edp_posts" ("slug");
