@@ -2,10 +2,11 @@
 import Layout from "../../layouts/default.astro";
 import WorkItem from "../../components/workitem.astro";
 import { getLanguageFromUrl } from "../../i18n/utils";
-import { GetContent, slugify } from "../../helpers/helpers";
+import { enrichJobListingImages, GetContent, slugify } from "../../helpers/helpers";
 
 const lang = getLanguageFromUrl(Astro.url);
 let jobs = await GetContent(lang, "jobs", {});
+jobs = await enrichJobListingImages(jobs, Astro.url.origin);
 let { page } = Astro.props;
 
 if (!page) {
