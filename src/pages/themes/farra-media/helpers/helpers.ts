@@ -1,4 +1,7 @@
 import { themeContentGateway } from "../../../../core/services/theme-content-gateway.ts";
+import { db } from "../../../../db/index.ts";
+import { getMediaById } from "../../../../core/services/media-service.ts";
+import { parseMetaValues } from "../../../../utils/meta-parser.ts";
 
 export const slugify = (value: string, separator: string = "-"): string => {
   return value
@@ -248,6 +251,88 @@ export function postThumbnailUrl(post: {
     }
   }
   return "";
+}
+
+export function parsePostThumbnailId(post: {
+  post_thumbnail_id?: unknown;
+}): number | null {
+  const raw = post.post_thumbnail_id;
+  const id =
+    typeof raw === "number" ? raw : Number.parseInt(String(raw ?? ""), 10);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function resolveLegacyImagePath(path: string, origin: string): string {
+  const trimmed = path.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith("/api/media")) {
+    return origin ? new URL(trimmed, origin).href : trimmed;
+  }
+  const normalized =
+    trimmed.startsWith("/uploads/") || trimmed.startsWith("/")
+      ? trimmed.startsWith("/")
+        ? trimmed
+        : `/${trimmed}`
+      : `/uploads/${trimmed.replace(/^uploads\//, "")}`;
+  const apiPath = `/api/media${normalized}`;
+  return origin ? new URL(apiPath, origin).href : apiPath;
+}
+
+/** URL da mídia via GET /api/media/{attachmentId} (mesmo contrato do admin). */
+export async function resolveAttachmentMediaUrl(
+  attachmentId: number,
+  origin = "",
+): Promise<string> {
+  const media = await getMediaById(db, attachmentId);
+  if (!media) {
+    return origin ? new URL(`/api/media/${attachmentId}`, origin).href : `/api/media/${attachmentId}`;
+  }
+
+  const meta = parseMetaValues(media.meta_values) as Record<string, unknown>;
+  const path =
+    (typeof meta.attachment_path === "string" && meta.attachment_path) ||
+    (typeof meta.attachment_file === "string" && meta.attachment_file) ||
+    "";
+
+  if (path) {
+    return resolveLegacyImagePath(path, origin);
+  }
+
+  return origin ? new URL(`/api/media/${attachmentId}`, origin).href : `/api/media/${attachmentId}`;
+}
+
+/**
+ * Imagem da grade de trabalhos: `post_thumbnail_id` (API de mídia) ou meta `image` legado.
+ */
+export async function jobListingImageUrl(
+  post: {
+    post_thumbnail_id?: unknown;
+    thumbnail?: unknown;
+    thumbnail_url?: unknown;
+    image?: unknown;
+  },
+  origin = "",
+): Promise<string> {
+  const thumbId = parsePostThumbnailId(post);
+  if (thumbId) {
+    const fromAttachment = await resolveAttachmentMediaUrl(thumbId, origin);
+    if (fromAttachment) return fromAttachment;
+  }
+  return postThumbnailUrl(post);
+}
+
+/** Preenche `image` em cada job para listagens (trabalhos / jobs). */
+export async function enrichJobListingImages<T extends Record<string, unknown>>(
+  jobs: T[],
+  origin = "",
+): Promise<T[]> {
+  return Promise.all(
+    jobs.map(async (job) => {
+      const image = await jobListingImageUrl(job, origin);
+      return image ? { ...job, image } : job;
+    }),
+  );
 }
 
 /** Conteúdo inline seguro para dentro de `<p class="edgtf-team-position">`. */

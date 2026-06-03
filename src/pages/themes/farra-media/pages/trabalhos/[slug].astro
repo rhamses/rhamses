@@ -2,13 +2,14 @@
 import Layout from "../../layouts/default.astro";
 import WorkItem from "../../components/workitem.astro";
 import { getLanguageFromUrl } from "../../i18n/utils";
-import { GetJobs, slugify } from "../../helpers/helpers";
+import { enrichJobListingImages, GetJobs, slugify } from "../../helpers/helpers";
 import { themeRouteParam } from "../../helpers/route";
 let { page } = Astro.props;
 const slug = themeRouteParam(Astro, "slug");
 const lang = getLanguageFromUrl(Astro.url);
 const posts = await GetJobs({ slug, lang });
-const jobs = posts.filter((post: any) => post.language.includes(lang));
+let jobs = posts.filter((post: any) => post.language.includes(lang));
+jobs = await enrichJobListingImages(jobs, Astro.url.origin);
 if (!page) {
   page = "trabalhos";
 }
