@@ -26,7 +26,7 @@ migrations_dir = "./drizzle"
 
 [[kv_namespaces]]
 binding = "CACHE"
-id = "00ca0b8ef45143f6aede0d5dd2d32e65"
+id = "71f578baa0484c24b06fe43f6b98a8d5"
 
 [[r2_buckets]]
 binding = "MEDIA_BUCKET"
