@@ -8,8 +8,7 @@ let { page } = Astro.props;
 const slug = themeRouteParam(Astro, "slug");
 const lang = getLanguageFromUrl(Astro.url);
 const posts = await GetJobs({ slug, lang });
-let jobs = posts.filter((post: any) => post.language.includes(lang));
-jobs = await enrichJobListingImages(jobs, Astro.url.origin);
+const jobs = await enrichJobListingImages(posts, Astro.url.origin);
 if (!page) {
   page = "trabalhos";
 }

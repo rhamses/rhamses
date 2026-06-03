@@ -130,9 +130,12 @@ export const GetPosts = async (params: any) => {
   return themeContentGateway.getPosts(params);
 };
 
-export const GetPostType = async (slug: string) => {
+export const GetPostType = async (slug: string, lang?: string) => {
   const postType = slug.replace(/^\//, "");
-  return themeContentGateway.getPostsByType(postType);
+  return themeContentGateway.getPostsByType(
+    postType,
+    lang ? { lang } : undefined,
+  );
 };
 
 export const GetCategoriesPost = async (params: any) => {
@@ -438,12 +441,13 @@ export const GetContent = async (
 ) => {
   let posts;
   if (postType) {
-    posts = await GetPostType("/" + postType);
+    posts = await GetPostType("/" + postType, lang || undefined);
   } else {
     posts = await GetPosts(params);
   }
 
-  if (lang) {
+  // Jobs: idioma só via id_locale_code no SQL (admin). Demais tipos: filtro legado em memória.
+  if (lang && postType !== "jobs") {
     posts = posts.filter((post: any) => matchesLanguage(post, lang));
   }
 
