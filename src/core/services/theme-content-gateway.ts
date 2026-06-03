@@ -469,7 +469,7 @@ export class ThemeContentGateway {
           OR json_extract(p.meta_values, '$.legacy_posttype') = 'jobs'
         )
         ${localeSqlFilter(lang)}
-      ORDER BY p.created_at DESC
+      ORDER BY CAST(json_extract(p.meta_values, '$.order') AS INTEGER) DESC, p.updated_at DESC
       LIMIT 500
     `);
   }
