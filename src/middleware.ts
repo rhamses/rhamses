@@ -17,7 +17,7 @@ import { getKvFromLocals } from "./utils/runtime-locals.ts";
 // Endpoints sensíveis que requerem validação extra de CSRF
 const sensitiveAPIPaths = ["/api/posts", "/api/upload", "/api/media"];
 const setupPath = `/setup/${defaultLocale}`;
-const FALLBACK_THEME_SLUG = "2026";
+const FALLBACK_THEME_SLUG = "rhamses";
 const DEFAULT_PUBLIC_THEME_LOCALE = "pt_BR";
 const DEFAULT_ADMIN_LOCALE = "pt-br";
 
