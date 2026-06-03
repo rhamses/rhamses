@@ -117,7 +117,7 @@ export const GetJobs = async (params: any) => {
   const slug = params?.slug;
   if (!slug) return [];
   const posts = await themeContentGateway.getJobBySlug(slug, params?.lang);
-  return sortByCreatedDesc(posts.map((post) => TagsFormat(post)));
+  return sortByOrderDesc(posts.map((post) => TagsFormat(post)));
 };
 
 export const GetPosts = async (params: any) => {
