@@ -242,12 +242,13 @@ const POST_SELECT_SQL = `
   LEFT JOIN ${EDP_TABLES.locales} l ON p.id_locale_code = l.id
 `;
 
+/** Filtra por `posts.id_locale_code` → `edp_locales.locale_code` (admin). Ignora meta legado. */
 function localeSqlFilter(lang?: string): string {
   if (lang === "en") {
-    return `AND (l.locale_code LIKE 'en%' OR json_extract(p.meta_values, '$.language') LIKE '%en%')`;
+    return `AND p.id_locale_code IS NOT NULL AND l.locale_code LIKE 'en%'`;
   }
   if (lang === "br") {
-    return `AND (l.locale_code LIKE 'pt%' OR json_extract(p.meta_values, '$.language') LIKE '%pt%')`;
+    return `AND p.id_locale_code IS NOT NULL AND l.locale_code LIKE 'pt%'`;
   }
   return "";
 }
@@ -322,6 +323,7 @@ export class ThemeContentGateway {
   async getPostsByType(postTypeSlug: string, params?: QueryInput): Promise<LegacyPostRecord[]> {
     const search = normalizeParams(params);
     const slugEq = search.get("filters[slug][$eq]") ?? search.get("slug");
+    const lang = search.get("lang")?.trim() || undefined;
     const limit = Math.min(1000, Math.max(1, parseInt(search.get("limit") ?? "200", 10) || 200));
     const safeType = escapeSqlLiteral(postTypeSlug.trim());
     if (!safeType) return [];
@@ -343,11 +345,8 @@ export class ThemeContentGateway {
           OR json_extract(p.meta_values, '$.legacy_posttype') = '${safeType}'
         )
         ${slugFilter}
-      ORDER BY ${
-        safeType === "jobs"
-          ? "p.created_at DESC"
-          : "CAST(json_extract(p.meta_values, '$.order') AS INTEGER) DESC, p.title ASC"
-      }
+        ${localeSqlFilter(lang)}
+      ORDER BY CAST(json_extract(p.meta_values, '$.order') AS INTEGER) DESC, p.title ASC
       LIMIT ${limit}
     `);
   }

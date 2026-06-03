@@ -166,7 +166,8 @@ const { initialData = [], templateCustomFields = [] } = Astro.props;
                   <input
                     type="checkbox"
                     class="checkbox checkbox-sm"
-                    x-model="item.template"
+                    :checked="item.template === true"
+                    @change="onTemplateToggle(item, $event)"
                   />
                   <span class="label-text text-sm"
                     >Transformar em um template?</span
@@ -317,6 +318,66 @@ const { initialData = [], templateCustomFields = [] } = Astro.props;
     </div>
     <div class="modal-backdrop" @click="modalOpen = false">Fechar</div>
   </div>
+
+  <!-- Modal: nome do template (ao marcar "Transformar em um template?") -->
+  <div
+    class="modal"
+    :class="{ 'modal-open': templateNameModalOpen }"
+    role="dialog"
+    aria-labelledby="template-name-modal-title"
+    x-show="templateNameModalOpen"
+    x-cloak
+    x-transition
+  >
+    <div class="modal-box relative max-w-md">
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm btn-circle absolute right-2 top-2"
+        aria-label="Fechar"
+        @click.prevent="cancelTemplateNameModal()"
+      >
+        <Icon name="line-md:close" size={20} aria-hidden="true" />
+      </button>
+      <h3 id="template-name-modal-title" class="font-semibold text-lg mb-4 pr-8">
+        Transformar em template
+      </h3>
+      <div class="form-control">
+        <label class="label py-1" for="template-name-input">
+          <span class="label-text">Nome do template</span>
+        </label>
+        <input
+          id="template-name-input"
+          type="text"
+          class="input input-bordered w-full"
+          placeholder="Nome do template"
+          x-model="templateNameInput"
+          @keydown.enter.prevent="saveTemplateName()"
+        />
+      </div>
+      <div class="modal-action">
+        <button
+          type="button"
+          class="btn btn-ghost"
+          @click.prevent="cancelTemplateNameModal()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          @click.prevent="saveTemplateName()"
+        >
+          Salvar
+        </button>
+      </div>
+    </div>
+    <div
+      class="modal-backdrop"
+      @click.prevent="cancelTemplateNameModal()"
+    >
+      Fechar
+    </div>
+  </div>
 </div>
 
 <script
@@ -371,6 +432,9 @@ const { initialData = [], templateCustomFields = [] } = Astro.props;
       return {
         customFields: processedData,
         modalOpen: false,
+        templateNameModalOpen: false,
+        templateNameModalItemId: null,
+        templateNameInput: "",
         modalTab: "create",
         newFieldName: "",
         newFieldTypeTexto: false,
@@ -497,6 +561,40 @@ const { initialData = [], templateCustomFields = [] } = Astro.props;
         },
         addRow(item) {
           item.rows.push({ id: Date.now(), name: "", value: "", type: "" });
+        },
+        onTemplateToggle(item, event) {
+          const input = event.target;
+          const wantsTemplate = input instanceof HTMLInputElement && input.checked;
+          if (!wantsTemplate) {
+            item.template = false;
+            return;
+          }
+          if (input instanceof HTMLInputElement) {
+            input.checked = false;
+          }
+          this.templateNameModalItemId = item.id;
+          this.templateNameInput = (item.title || "").trim();
+          this.templateNameModalOpen = true;
+        },
+        saveTemplateName() {
+          const name = (this.templateNameInput || "").trim();
+          if (!name) return;
+          const item = this.customFields.find(
+            (f) => f.id === this.templateNameModalItemId,
+          );
+          if (item) {
+            item.template = true;
+            item.title = name;
+          }
+          this.closeTemplateNameModal();
+        },
+        cancelTemplateNameModal() {
+          this.closeTemplateNameModal();
+        },
+        closeTemplateNameModal() {
+          this.templateNameModalOpen = false;
+          this.templateNameModalItemId = null;
+          this.templateNameInput = "";
         },
       };
     };
