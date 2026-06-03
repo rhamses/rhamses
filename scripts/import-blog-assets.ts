@@ -1,12 +1,12 @@
 /**
- * Copia imagens/vídeos do blog legado para o bucket R2 local (edgepress-media)
+ * Copia imagens/vídeos do blog legado para o bucket R2 local (MEDIA_BUCKET / wrangler.toml)
  * e reescreve URLs nos posts importados.
  *
  * Uso: npm run db:import:blog-assets
  */
 import { execFileSync } from "node:child_process";
 import { basename, extname, join, relative } from "node:path";
-import { readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { createClient } from "@libsql/client/node";
 import { and, eq, like, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
@@ -15,12 +15,26 @@ import { ensurePostTypesFromDefaults } from "../src/db/seed.ts";
 import { parseMetaValues } from "../src/utils/meta-parser.ts";
 
 const WRANGLER_STATE = join(process.cwd(), ".wrangler", "state", "v3", "d1");
-const BUCKET = "edgepress-media";
 const R2_PREFIX = "uploads/blog";
+
+/** Deve coincidir com `[[r2_buckets]].bucket_name` em wrangler.toml (binding MEDIA_BUCKET). */
+function getMediaBucketName(): string {
+  try {
+    const toml = readFileSync(join(process.cwd(), "wrangler.toml"), "utf8");
+    const match = toml.match(/^\s*bucket_name\s*=\s*"([^"]+)"/m);
+    if (match?.[1]) return match[1];
+  } catch {
+    // ignore
+  }
+  return "demo-bucket";
+}
+
+const BUCKET = getMediaBucketName();
 
 const LEGACY_BLOG_ROOT = "/Users/rhamses/Sites/rhams.es/blog/public";
 const LEGACY_BLOG_ASSETS = join(LEGACY_BLOG_ROOT, "assets", "blog");
 const LEGACY_SHARED_ASSETS = join(LEGACY_BLOG_ROOT, "assets");
+const LEGACY_FONTS_DIR = join(LEGACY_BLOG_ROOT, "assets", "fonts");
 
 const MIME_BY_EXT: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -32,6 +46,7 @@ const MIME_BY_EXT: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".mp4": "video/mp4",
+  ".woff2": "font/woff2",
 };
 
 const SHARED_ASSET_FILES = [
@@ -177,6 +192,31 @@ async function uploadLegacyAssets(): Promise<{
       console.warn(`Falha ao enviar asset compartilhado ${name}:`, err);
       skipped += 1;
     }
+  }
+
+  try {
+    if (!statSync(LEGACY_FONTS_DIR).isDirectory()) throw new Error("skip");
+    for (const filePath of walkFiles(LEGACY_FONTS_DIR)) {
+      const rel = relative(LEGACY_FONTS_DIR, filePath).replace(/\\/g, "/");
+      if (!rel.endsWith(".woff2")) continue;
+      const r2Key = `${R2_PREFIX}/fonts/${rel}`;
+      try {
+        putR2Object(r2Key, filePath);
+        uploaded += 1;
+        assets.push({
+          rel: `fonts/${rel}`,
+          r2Key,
+          attachmentPath: attachmentPathFromR2Key(r2Key),
+          fileName: basename(filePath),
+          mimeType: mimeFor(filePath),
+        });
+      } catch (err) {
+        console.warn(`Falha ao enviar fonte ${rel}:`, err);
+        skipped += 1;
+      }
+    }
+  } catch {
+    // fontes opcionais
   }
 
   const faviconPath = join(LEGACY_BLOG_ROOT, "favicon.ico");
@@ -418,7 +458,7 @@ async function main(): Promise<void> {
     throw new Error(`Banco D1 local não encontrado em ${WRANGLER_STATE}`);
   }
 
-  console.log("Enviando assets do blog legado para R2 local...");
+  console.log(`Enviando assets do blog legado para R2 local (bucket: ${BUCKET})...`);
   const { uploaded, skipped, assets } = await uploadLegacyAssets();
   console.log(`R2: ${uploaded} arquivo(s) enviado(s), ${skipped} falha(s).`);
 

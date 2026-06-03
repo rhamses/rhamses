@@ -64,6 +64,53 @@ function parseFrontmatterDocument(content: string): { frontmatter: Frontmatter; 
   };
 }
 
+async function ensureRhamsesTheme(
+  db: ReturnType<typeof drizzle>,
+  typeIds: Record<string, number>,
+): Promise<void> {
+  const themesTypeId = typeIds["themes"];
+  if (!themesTypeId) return;
+
+  const now = Date.now();
+  const rhamsesMeta = JSON.stringify({
+    theme_slug: "rhamses",
+    theme_path: "src/pages/themes/rhamses",
+    is_active: "1",
+    requested_active: "1",
+    supports: "single,archive",
+    version: "1.0.0",
+    import_source: "rhams.es/blog",
+  });
+
+  const [existing] = await db
+    .select({ id: schema.posts.id })
+    .from(schema.posts)
+    .where(and(eq(schema.posts.post_type_id, themesTypeId), eq(schema.posts.slug, "rhamses")))
+    .limit(1);
+
+  if (!existing) {
+    await db.insert(schema.posts).values({
+      post_type_id: themesTypeId,
+      title: "Rhamsés Blog",
+      slug: "rhamses",
+      status: "published",
+      meta_values: rhamsesMeta,
+      created_at: now,
+      updated_at: now,
+    });
+  } else {
+    await db
+      .update(schema.posts)
+      .set({ meta_values: rhamsesMeta, updated_at: now })
+      .where(eq(schema.posts.id, existing.id));
+  }
+
+  await db
+    .update(schema.settings)
+    .set({ value: "rhamses" })
+    .where(eq(schema.settings.name, "active_theme"));
+}
+
 async function main(): Promise<void> {
   const sqlitePath = findLocalD1Sqlite(WRANGLER_STATE);
   if (!sqlitePath) {
@@ -193,6 +240,8 @@ async function main(): Promise<void> {
       }
     }
 
+    await ensureRhamsesTheme(db, typeIds);
+    console.log(`Tema ativo: rhamses.`);
     console.log(`Importação concluída. Inseridos: ${importedCount}. Atualizados: ${updatedCount}.`);
   } finally {
     client.close();

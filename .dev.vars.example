@@ -10,4 +10,4 @@ BETTER_AUTH_TRUSTED_ORIGINS=http://localhost,http://localhost:8788
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxx
 RESEND_FROM=contato@seudominio.com
 
-# R2: Create the 'edgepress-media' bucket on the Cloudflare dashboard for media uploads (/api/upload)
+# R2: bucket_name em wrangler.toml (ex.: demo-bucket) — uploads em /api/upload e /api/media/

@@ -412,30 +412,53 @@ export async function runSeed(db: any): Promise<void> {
     }
   }
 
-  // Tema padrão showcase (slug 2026): post "themes" ativo para o site público.
+  // Tema rhams.es blog (slug rhamses): post "themes" ativo para o site público.
   const themesTypeId = typeIds["themes"];
   if (themesTypeId) {
-    const [existingTheme2026] = await db
+    const rhamsesMeta = JSON.stringify({
+      theme_slug: "rhamses",
+      theme_path: "src/pages/themes/rhamses",
+      is_active: "1",
+      requested_active: "1",
+      supports: "single,archive",
+      version: "1.0.0",
+      import_source: "rhams.es/blog",
+    });
+
+    const [existingRhamses] = await db
       .select({ id: posts.id })
       .from(posts)
-      .where(and(eq(posts.post_type_id, themesTypeId), eq(posts.slug, "2026")))
+      .where(and(eq(posts.post_type_id, themesTypeId), eq(posts.slug, "rhamses")))
       .limit(1);
 
-    if (!existingTheme2026) {
+    if (!existingRhamses) {
       await db.insert(posts).values({
         post_type_id: themesTypeId,
-        title: "Edgepress Showcase 2026",
-        slug: "2026",
+        title: "Rhamsés Blog",
+        slug: "rhamses",
         status: "published",
-        meta_values: JSON.stringify({
-          is_active: "1",
-          requested_active: "1",
-          github_ref: "main",
-          supports: "single,archive,page",
-          version: "1.0.0",
-        }),
+        meta_values: rhamsesMeta,
         created_at: now,
         updated_at: now,
+      });
+    } else {
+      await db
+        .update(posts)
+        .set({ meta_values: rhamsesMeta, updated_at: now })
+        .where(eq(posts.id, existingRhamses.id));
+    }
+
+    const [activeThemeSetting] = await db
+      .select({ name: settings.name })
+      .from(settings)
+      .where(eq(settings.name, "active_theme"))
+      .limit(1);
+
+    if (!activeThemeSetting) {
+      await db.insert(settings).values({
+        name: "active_theme",
+        value: "rhamses",
+        autoload: true,
       });
     }
   }
