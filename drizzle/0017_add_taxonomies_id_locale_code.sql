@@ -1,1 +1,0 @@
--- id_locale_code already added to taxonomies in 0013_amused_deathbird.sql; this migration is a no-op to avoid duplicate column error.
